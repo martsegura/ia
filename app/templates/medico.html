@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Panel médico · SaluDuoc{% endblock %}
 {% block content %}
+{% set labels = {"C1": "Emergencia vital", "C2": "Emergencia evidente", "C3": "Urgencia con riesgo", "C4": "Urgencia mediata", "C5": "Consulta general"} %}
+{% set status_labels = {"waiting": "En espera", "called": "Llamado", "in_attention": "En atención", "attended": "Atendido", "left": "Retirado"} %}
 <section class="page-head">
   <div>
     <span class="pill pill-doctor">Médico</span>
@@ -10,13 +12,14 @@
       {% if establishment %} · {{ establishment.nombre }}{% endif %}
     </p>
   </div>
+  <button type="button" class="btn" id="refresh-queue">Actualizar cola</button>
 </section>
 
 <div class="stat-grid">
   <article class="stat-card">
     <span>Pacientes en cola</span>
     <strong>{{ queue_count }}</strong>
-    <small>Cola de espera</small>
+    <small>En espera, llamados o en atención</small>
   </article>
   <article class="stat-card stat-red">
     <span>C1 / C2</span>
@@ -33,17 +36,68 @@
 <section class="panel">
   <div class="panel-head">
     <h2>Cola de espera</h2>
-    <span class="badge badge-info">Fase 4</span>
+    <span class="badge badge-info">{{ queue_count }} activos</span>
   </div>
+
+  {% if queue_entries %}
+  <div class="queue-list">
+    {% for entry in queue_entries %}
+    <article class="queue-card triage-border-{{ entry.color }}">
+      <div class="queue-head">
+        <div class="queue-title">
+          <span class="badge triage-bg-{{ entry.color }}">{{ entry.category }}</span>
+          <strong>{{ entry.patient_name }}</strong>
+          <span class="muted">{{ labels[entry.category] }}</span>
+        </div>
+        <div class="queue-time">
+          <span class="badge">{{ status_labels[entry.status] }}</span>
+          <span class="muted">Hace {{ entry.wait_minutes }} min</span>
+        </div>
+      </div>
+
+      <div class="queue-summary-grid">
+        <div><span>Posición</span><strong>{% if entry.position %}#{{ entry.position }}{% else %}—{% endif %}</strong></div>
+        <div><span>FC</span><strong>{{ entry.vitals["heart_rate_bpm"] or "—" }} lpm</strong></div>
+        <div><span>Presión</span><strong>{{ entry.vitals["systolic_mmhg"] or "—" }}/{{ entry.vitals["diastolic_mmhg"] or "—" }}</strong></div>
+        <div><span>SpO2</span><strong>{{ entry.vitals["spo2_pct"] or "—" }}%</strong></div>
+      </div>
+
+      {% if entry.symptoms %}
+      <p class="queue-symptoms"><strong>Síntomas:</strong> {{ entry.symptoms | join(", ") }}</p>
+      {% else %}
+      <p class="queue-symptoms muted">Sin síntomas declarados.</p>
+      {% endif %}
+
+      {% if entry.rationale %}
+      <p class="queue-rationale">{{ entry.rationale }}</p>
+      {% endif %}
+
+      <div class="queue-actions">
+        {% if entry.status == "waiting" %}
+        <button type="button" class="btn btn-sm btn-primary" data-queue-action="called" data-entry="{{ entry.id }}">Llamar</button>
+        {% elif entry.status == "called" %}
+        <button type="button" class="btn btn-sm btn-primary" data-queue-action="in_attention" data-entry="{{ entry.id }}">Iniciar atención</button>
+        {% elif entry.status == "in_attention" %}
+        <button type="button" class="btn btn-sm btn-primary" data-queue-action="attended" data-entry="{{ entry.id }}">Finalizar atención</button>
+        {% endif %}
+        {% if entry.status in ("waiting", "called", "in_attention") %}
+        <button type="button" class="btn btn-sm" data-queue-action="left" data-entry="{{ entry.id }}">Retirar de la cola</button>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
   <div class="empty-state">
-    <p><strong>La cola estará disponible en la Fase 4.</strong></p>
-    <p>Aquí verás a los pacientes ordenados por categoría y hora de llegada, con los colores del triage chileno.</p>
+    <p><strong>No hay pacientes en la cola.</strong></p>
+    <p>Cuando un paciente registre sus signos vitales y elija este establecimiento, aparecerá aquí ordenado por categoría y hora de llegada.</p>
     <ul class="legend">
       <li><span class="dot dot-red"></span> C1 y C2 · Atención inmediata</li>
       <li><span class="dot dot-yellow"></span> C3 · Urgencia con riesgo</li>
       <li><span class="dot dot-green"></span> C4 y C5 · Atención general</li>
     </ul>
   </div>
+  {% endif %}
 </section>
 
 <section class="panel">

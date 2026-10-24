@@ -17,13 +17,19 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import load_user_from_token
 from app.api.v1.auth import router as auth_router
+from app.api.v1.establishments import router as establishments_router
+from app.api.v1.queue import router as queue_router
+from app.api.v1.triage import router as triage_router
 from app.api.v1.users import router as users_router
+from app.api.v1.vitals import router as vitals_router
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.enums import UserRole
 from app.models.establishment import Establishment
 from app.models.normal_range import NormalRange
 from app.models.user import User
+from app.services import consultation, queue_service
+from app.services.triage import SUPPORTED_SYMPTOMS
 
 BASE_DIR = Path(__file__).resolve().parent
 IS_PROD = settings.ENV == "prod"
@@ -48,6 +54,10 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
+app.include_router(vitals_router, prefix="/api/v1")
+app.include_router(triage_router, prefix="/api/v1")
+app.include_router(establishments_router, prefix="/api/v1")
+app.include_router(queue_router, prefix="/api/v1")
 
 
 def home_for(user: User) -> str:
@@ -157,7 +167,21 @@ def patient_page(request: Request, db: Session = Depends(get_db)):
     if redirect is not None:
         return redirect
     profile = user.patient_profile
-    context = base_context(request, user) | {"profile": profile}
+    latest = consultation.latest_assessment(db, user)
+    queue_entry = queue_service.entry_for_patient(db, user.id)
+    establishments = db.scalars(
+        select(Establishment)
+        .where(Establishment.is_active.is_(True))
+        .order_by(Establishment.nombre)
+    ).all()
+    context = base_context(request, user) | {
+        "profile": profile,
+        "latest": consultation.assessment_out(db, latest) if latest else None,
+        "queue_entry": queue_service.serialize_entry(db, queue_entry) if queue_entry else None,
+        "history": consultation.vitals_history(db, user, limit=5),
+        "symptoms": SUPPORTED_SYMPTOMS,
+        "establishments": establishments,
+    }
     return templates.TemplateResponse(request=request, name="paciente.html", context=context)
 
 
@@ -168,12 +192,20 @@ def doctor_page(request: Request, db: Session = Depends(get_db)):
         return redirect
     doctor_profile = user.doctor_profile
     establishment = doctor_profile.establecimiento if doctor_profile else None
+    queue_entries = (
+        queue_service.list_queue(db, establishment.id) if establishment else []
+    )
     context = base_context(request, user) | {
         "doctor_profile": doctor_profile,
         "establishment": establishment,
-        "queue_count": 0,
-        "critical_count": 0,
-        "in_attention_count": 0,
+        "queue_entries": queue_entries,
+        "queue_count": len(queue_entries),
+        "critical_count": sum(
+            1 for entry in queue_entries if entry.category in ("C1", "C2")
+        ),
+        "in_attention_count": sum(
+            1 for entry in queue_entries if entry.status == "in_attention"
+        ),
     }
     return templates.TemplateResponse(request=request, name="medico.html", context=context)
 

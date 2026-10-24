@@ -7,8 +7,10 @@ constraints reales. Levanta el servicio db-test con:
 
 from __future__ import annotations
 
+import json
 import os
 from collections.abc import Generator
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -27,7 +29,7 @@ from app.core.security import hash_password  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.db.session import get_db  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import DoctorProfile, PatientProfile, User, UserRole  # noqa: E402
+from app.models import DoctorProfile, NormalRange, PatientProfile, User, UserRole  # noqa: E402
 from app.services.rate_limit import login_limiter  # noqa: E402
 
 engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
@@ -42,6 +44,30 @@ PASSWORD = "Demo123!"
 def prepare_database() -> Generator[None, None, None]:
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
+    data_file = Path(__file__).resolve().parents[1] / "data" / "seed" / "normal_ranges.json"
+    items = json.loads(data_file.read_text(encoding="utf-8"))
+    with TestingSessionLocal() as session:
+        for item in items:
+            session.add(
+                NormalRange(
+                    metric=item["metric"],
+                    label=item["label"],
+                    unit=item.get("unit"),
+                    normal_min=item.get("normal_min"),
+                    normal_max=item.get("normal_max"),
+                    mild_low=item.get("mild_low"),
+                    mild_high=item.get("mild_high"),
+                    moderate_low=item.get("moderate_low"),
+                    moderate_high=item.get("moderate_high"),
+                    critical_low=item.get("critical_low"),
+                    critical_high=item.get("critical_high"),
+                    is_informational=bool(item.get("is_informational")),
+                    version=item.get("version", "v1"),
+                    fuente=item.get("fuente"),
+                    is_active=True,
+                )
+            )
+        session.commit()
     yield
     Base.metadata.drop_all(engine)
 

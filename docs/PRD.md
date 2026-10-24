@@ -218,9 +218,9 @@ Rangos iniciales (adulto, MINSAL, a validar por un profesional):
 
 | Fase | Alcance | Estado |
 |------|---------|--------|
-| 0 | Scaffold, Docker, Alembic, auth, RBAC, seed base, CI | Completada (29 tests) |
-| 1 | Perfil completo, carga de vitales, JSON de ejemplo | Pendiente |
-| 2 | Rangos, reglas y motor de triage | Pendiente |
-| 3 | Establecimientos y distancia en la UI | Pendiente |
-| 4 | Cola y vista del médico | Pendiente |
-| 5 | Panel admin, pulido y despliegue | Pendiente |
+| 0 | Scaffold, Docker, Alembic, auth, RBAC, seed base, CI | Completada |
+| 1 | Perfil, carga manual y JSON de wearables | Completada |
+| 2 | Rangos MINSAL y motor de triage C1–C5 | Completada |
+| 3 | Establecimientos y distancia en la UI | Parcial (API y selector; falta orden por geolocalización) |
+| 4 | Cola por establecimiento y vista del médico | Completada |
+| 5 | Gestión admin completa, pulido y despliegue | Pendiente |

@@ -158,20 +158,25 @@ seed solo se crean con `--demo` y `ENV=dev|test`.
 Las páginas se protegen en el servidor: sin sesión redirigen a `/login`; con un
 rol distinto redirigen al panel correspondiente (HTTP 303).
 
-### Planificado
+### Fases 1–2 y cola (implementadas)
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| POST | `/api/v1/vitals` | patient | Formulario manual + triage + cola |
+| POST | `/api/v1/vitals/upload` | patient | JSON de wearable + triage |
+| GET | `/api/v1/vitals/me` | patient | Historial de vitales |
+| GET | `/api/v1/vitals/symptoms` | público | Catálogo de síntomas |
+| GET | `/api/v1/triage/me/latest` | patient | Última evaluación |
+| GET | `/api/v1/triage/{id}` | dueño/médico/admin | Detalle |
+| GET | `/api/v1/establishments` | autenticado | Lista, distancia opcional |
+| GET | `/api/v1/queue` | doctor/admin | Cola activa |
+| GET | `/api/v1/queue/me` | patient | Entrada activa propia |
+| POST | `/api/v1/queue/{id}/status` | doctor/admin | Transición de estado |
+
+### Pendiente (Fase 5)
 
 ```
-GET/POST  /api/v1/patients/me/vitals
-POST      /api/v1/patients/me/vitals/upload
-POST      /api/v1/triage/assess
-GET       /api/v1/triage/me/latest
-GET       /api/v1/triage/{id}
 POST      /api/v1/triage/{id}/reclassify
-GET       /api/v1/establishments?lat&lng&emergency
-GET       /api/v1/queue
-GET       /api/v1/queue/me
-POST      /api/v1/queue/{id}/call|start|attend|leave
-POST      /api/v1/queue/{id}/reclassify
 CRUD      /api/v1/admin/establishments|normal-ranges|triage-rules
 ```
 
@@ -195,25 +200,27 @@ CRUD      /api/v1/admin/establishments|normal-ranges|triage-rules
 Validaciones: rangos plausibles, timestamps no futuros, tamaño máximo, paciente
 tomado del token. El payload original se guarda en `vital_records.raw_payload`.
 
-## 8. Motor de triage (Fase 2)
+## 8. Motor de triage (implementado)
 
 ```
 datos validados
    │
    ├─► 1. banderas rojas ──► C1 / C2 (override)
+   │      SpO2 <85 (C1), SpO2 85–89 (C2), FC <40 o >150 (C2),
+   │      PAS <80 o ≥180 (C2), PAD ≥120 (C2), dolor ≥8 (C2),
+   │      síntomas C1/C2 y dolor torácico inestable
    │
-   ├─► 2. score ponderado por desviación de rangos
-   │        + edad + síntomas + comorbilidades
-   │        ──► C3 / C4 / C5
+   ├─► 2. severidad por banda (normal/leve/moderado/crítico)
+   │      + síntomas moderados + dolor + edad + comorbilidades
+   │      ──► C3 / C4 / C5
    │
    └─► 3. salvaguardas: datos faltantes ⇒ mínimo C3
 ```
 
-- Reglas y umbrales en base de datos, versionados y explicables.
+- Umbrales en `normal_ranges`, versionados y explicables.
 - Se devuelve `triggered_rules`, `score` y `rationale`.
-- El médico puede reclasificar con motivo obligatorio; se guarda
-  `final_category` y `override_reason`.
-- La app nunca da de alta ni diagnostica.
+- Colores: C1/C2 rojo, C3 amarillo, C4/C5 verde.
+- La app nunca da de alta ni diagnostica; el médico confirma.
 
 ## 9. Seed de establecimientos
 
@@ -249,19 +256,21 @@ R = 6371 km
 `GET /establishments?lat&lng` ordena por distancia ascendente. Las coordenadas
 del paciente no se persisten por defecto.
 
-## 11. Cola (Fase 4)
+## 11. Cola (implementada)
 
 Máquina de estados:
 
 ```
 waiting ──► called ──► in_attention ──► attended
-   │            │
-   └────────────┴──► left
+   │            │             │
+   └────────────┴─────────────┴──► left
 ```
 
-Orden: categoría (C1→C5) y luego `created_at`. El paciente elige el
+Orden: prioridad (C1=1 … C5=5) y luego `created_at`. El paciente elige el
 establecimiento antes del triage; la entrada se crea automáticamente al calcular
-la categoría.
+la categoría. El médico ve solo la cola de su establecimiento y puede llamar,
+iniciar, finalizar o retirar. Al crear una nueva solicitud, las anteriores
+activas del mismo paciente se cierran como `left`.
 
 ## 12. Configuración
 

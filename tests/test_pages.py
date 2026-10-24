@@ -30,8 +30,8 @@ def test_patient_page_renders_profile(client, make_user):
     response = client.get("/paciente")
     assert response.status_code == 200
     assert "Hola, Ana" in response.text
-    assert "Mi perfil" in response.text
-    assert "Próximos pasos" in response.text
+    assert "Nuevo registro" in response.text
+    assert "Historial reciente" in response.text
 
 
 def test_patient_cannot_open_admin_or_doctor_pages(client, make_user):

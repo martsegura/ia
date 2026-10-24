@@ -305,3 +305,121 @@ button { margin-top: 0.6rem; }
   .page-head { flex-direction: column; }
   .nav-user { display: none; }
 }
+
+/* --- Formularios de registro --- */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem 1.2rem;
+  margin-bottom: 1rem;
+}
+.field { display: grid; gap: 0.35rem; margin-bottom: 0.8rem; }
+.field label { font-weight: 700; font-size: 0.88rem; }
+.field select,
+.field textarea {
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 0.95rem;
+  background: #fbfcfe;
+  font-family: inherit;
+  width: 100%;
+}
+.field textarea { resize: vertical; }
+.field select:focus,
+.field textarea:focus { outline: 2px solid #9bd4d0; border-color: var(--primary); }
+
+.symptom-fieldset {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  margin: 0 0 1rem;
+}
+.symptom-fieldset legend { font-weight: 700; font-size: 0.9rem; padding: 0 0.4rem; }
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem 1rem;
+}
+.check { display: flex; align-items: center; gap: 0.45rem; font-weight: 500; font-size: 0.9rem; }
+.check input { width: auto; }
+
+.tabs {
+  display: flex;
+  gap: 0.4rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.1rem;
+}
+.tab {
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  padding: 0.65rem 0.9rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+}
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); background: #f2fbfa; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* --- Resultado de triage --- */
+.result-panel { border-left-width: 8px; border-left-style: solid; }
+.triage-border-rojo { border-left-color: var(--red); }
+.triage-border-amarillo { border-left-color: var(--yellow); }
+.triage-border-verde { border-left-color: var(--green); }
+.triage-bg-rojo { background: #fdecea; color: var(--red); }
+.triage-bg-amarillo { background: #fff4d6; color: #8a6100; }
+.triage-bg-verde { background: #e6f4ea; color: var(--green); }
+.triage-text-rojo { color: var(--red) !important; }
+.triage-text-amarillo { color: #b58100 !important; }
+.triage-text-verde { color: var(--green) !important; }
+.result-title { display: flex; align-items: center; gap: 0.7rem; }
+.result-title h2 { margin: 0; }
+.result-rationale { color: var(--muted); line-height: 1.55; }
+.alert { border-radius: 12px; padding: 0.9rem 1rem; margin: 0.8rem 0; }
+.alert-danger { background: #fdecea; border: 1px solid #f5c2bd; color: #8c1d18; }
+.rule-list { list-style: none; padding: 0; margin: 0.5rem 0 1rem; display: grid; gap: 0.45rem; }
+.rule-list li { display: flex; align-items: center; gap: 0.6rem; color: var(--muted); }
+.queue-summary { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.queue-summary h3 { margin: 0 0 0.7rem; font-size: 1rem; }
+.queue-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+.queue-summary-grid span { display: block; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.queue-summary-grid strong { display: block; margin-top: 0.15rem; }
+
+/* --- Cola médica --- */
+.queue-list { display: grid; gap: 1rem; }
+.queue-card {
+  border: 1px solid var(--border);
+  border-left-width: 8px;
+  border-left-style: solid;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  background: #fdfefe;
+}
+.queue-head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+.queue-title { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+.queue-time { display: flex; align-items: center; gap: 0.6rem; }
+.queue-symptoms { margin: 0.8rem 0 0.2rem; font-size: 0.9rem; }
+.queue-rationale { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.85rem; }
+.queue-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.9rem; }
+.queue-card .queue-summary-grid { margin-top: 0.8rem; }
+.badge-warn { background: #fff4d6; color: #8a6100; }
+
+@media (max-width: 800px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .checkbox-grid { grid-template-columns: 1fr 1fr; }
+  .queue-summary-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* Evita que la barra sticky tape el resultado al navegar con #resultado */
+#resultado,
+#nuevo-registro,
+.panel {
+  scroll-margin-top: 92px;
+}

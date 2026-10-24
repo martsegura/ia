@@ -9,6 +9,15 @@ el versionado semántico ([SemVer](https://semver.org/lang/es/)).
 
 ### Added
 
+- Carga manual de signos vitales y subida de JSON de reloj inteligente.
+- Motor de triage C1–C5 con banderas rojas, severidad por bandas MINSAL,
+  explicación, reglas activadas y salvaguarda de datos incompletos.
+- Cola de espera por establecimiento creada automáticamente desde el triage.
+- Acciones del médico: llamar, iniciar atención, finalizar y retirar.
+- Historial de signos vitales y resultado de triage en el panel del paciente.
+- Migraciones `vital_records`, `symptom_reports`, `triage_assessments` y
+  `queue_entries`; 64 tests en verde.
+
 - Paneles por rol: `/paciente`, `/medico` y `/admin`, con redirección
   automática después del login y protección server-side por rol.
 - Navbar con enlace al panel, nombre del usuario y cierre de sesión.
