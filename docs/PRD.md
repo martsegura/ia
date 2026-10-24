@@ -1,8 +1,15 @@
 # PRD — SaluDuoc
 
-**Versión:** 0.1 (Fase 0)
+**Versión:** 0.1.0 (Fase 0)
 **Fecha:** 2026-10-24
 **Estado:** Aprobado para implementación por fases
+
+> **Alcance de la Fase 0:** están implementados el registro/login (4.1), el
+> perfil del paciente (4.2), la actualización de especialidad del médico y el
+> listado de usuarios para admin (gestión de usuarios). La carga de signos
+> vitales (4.3), el triage (4.4), la distancia en la interfaz (4.5), la cola
+> (4.6) y el CRUD de administración (4.7) corresponden a las fases 1–5 y aún no
+> están implementados.
 
 ## 1. Problema y oportunidad
 
@@ -55,7 +62,7 @@ mis datos de salud.
 - Login correcto deja una cookie HttpOnly `saluduoc_token` y responde `200`.
 - Credenciales inválidas responden `401`; 5 fallos por minuto por IP+correo
   bloquean con `429` (un login exitoso de otra cuenta no limpia el bloqueo).
-- Logout invalida los tokens emitidos y `/auth/me` vuelve a responder `401`.
+- Logout invalida los tokens emitidos y `/api/v1/auth/me` vuelve a responder `401`.
 - Los errores de validación no reflejan la contraseña enviada.
 - En producción no se permite un `SECRET_KEY` débil ni cookies sin `Secure`.
 
@@ -163,7 +170,8 @@ Rangos iniciales (adulto, MINSAL, a validar por un profesional):
 - **Rendimiento:** respuesta de triage < 300 ms para un registro; lista de
   establecimientos < 500 ms con el seed actual.
 - **Usabilidad:** interfaz en español, responsive, colores accesibles y claros.
-- **Disponibilidad:** despliegue contenedorizado, healthcheck `/healthz`.
+- **Disponibilidad:** despliegue contenedorizado, liveness `/healthz` y
+  readiness `/readyz` (este último comprueba la base de datos).
 - **Mantenibilidad:** tests automatizados, migraciones Alembic, documentación.
 
 ## 7. Marco legal y ético

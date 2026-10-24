@@ -6,8 +6,8 @@ desactivado o las cuentas demo podían llegar a producción. Además, el logout
 solo borraba la cookie y el token copiado seguía vigente.
 
 ## Decisión
-- El arranque en `ENV=prod` falla con `SECRET_KEY` débil (<32 caracteres o valor
-  de ejemplo) o con `COOKIE_SECURE=false`.
+- El arranque con `ENV` distinto de `dev`/`test` falla con `SECRET_KEY` débil
+  (<32 caracteres o valor de ejemplo) o con `COOKIE_SECURE=false`.
 - Las cuentas demo requieren `python scripts/seed.py --demo` y solo se permiten
   en `dev|test`.
 - `users.token_version` se incluye en el JWT (`ver`); el logout lo incrementa.

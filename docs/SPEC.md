@@ -1,6 +1,8 @@
 # Especificación técnica — SaluDuoc
 
-**Versión:** 0.1 (Fase 0)
+**Versión:** 0.1.0 (Fase 0)
+**Estado:** Fase 0 implementada. Las secciones marcadas como planificadas
+corresponden a las fases 1–5 y no deben interpretarse como funcionalidad actual.
 
 ## 1. Arquitectura
 
@@ -8,7 +10,7 @@
 Navegador (HTML/CSS/JS vanilla)
         │  fetch + cookie HttpOnly
         ▼
-FastAPI  ──►  Servicios (auth, triage, distancia, cola)
+FastAPI  ──►  Servicios (auth implementado; triage, distancia y cola planificados)
    │                 │
    │                 ▼
    └──────────►  PostgreSQL 16
@@ -38,7 +40,7 @@ SPA ni bundler. PostgreSQL es la fuente de verdad.
 
 ```
 app/
-├── main.py                 # FastAPI, rutas de páginas, /healthz
+├── main.py                 # FastAPI, rutas de páginas, /healthz y /readyz
 ├── core/config.py          # Settings (pydantic-settings)
 ├── core/security.py        # Argon2 + JWT
 ├── db/base.py              # Base declarativa y naming convention
@@ -63,8 +65,9 @@ tests/                      # pytest
 ### Implementado en Fase 0
 
 **users**
-`id UUID PK`, `email unique`, `password_hash`, `role` (`patient|doctor|admin`),
-`full_name`, `is_active`, `created_at`, `updated_at`.
+`id UUID PK`, `email unique`, `password_hash`, `role` (`patient|doctor|admin` en
+la API; `PATIENT|DOCTOR|ADMIN` en la base con check constraint), `full_name`,
+`is_active`, `token_version`, `created_at`, `updated_at`.
 
 **patient_profiles**
 `id UUID PK`, `user_id FK unique`, `rut`, `birth_date`, `sexo`, `peso_kg`,
@@ -83,9 +86,10 @@ timestamps.
 **normal_ranges**
 `id UUID PK`, `metric`, `label`, `unit`, `normal_min/max`, `mild_low/high`,
 `moderate_low/high`, `critical_low/high`, `edad_min/max`, `sexo`,
-`is_informational`, `version`, `fuente`, `is_active`, timestamps.
+`is_informational`, `version`, `fuente`, `is_active`, timestamps. Restricción
+`unique (metric, version)`.
 
-### Planificado (Fases 1–4)
+### Planificado (Fases 1–5)
 
 - `vital_records`: paciente, timestamp, fuente, dispositivo, FC, PAS, PAD, SpO2,
   sueño (score/horas), payload crudo JSON.
@@ -100,23 +104,25 @@ timestamps.
 
 ## 5. Autenticación y autorización
 
-1. `POST /auth/login` valida Argon2 y firma un JWT HS256 con `sub` y `role`.
+1. `POST /api/v1/auth/login` valida Argon2 y firma un JWT HS256 con `sub`,
+   `role` y `ver`.
 2. El token se envía en la cookie `saluduoc_token` (`HttpOnly`, `SameSite=Lax`,
    `Secure` según configuración, `Max-Age` = TTL). Incluye `ver` (versión de
    sesión).
 3. `get_current_user` lee la cookie, valida el JWT, comprueba `ver` contra
-   `users.token_version` y carga el usuario activo.
+   `users.token_version` y carga el usuario activo. El rol efectivo se lee de la
+   base de datos, no se confía en el claim del token.
 4. `require_roles(*roles)` protege endpoints por rol.
 5. Logout incrementa `token_version` (invalida todos los tokens emitidos) y
    elimina la cookie.
 
 Rate limit de login: 5 fallos por `IP + email` por minuto (en memoria, un
-proceso). En producción con varios workers se debe usar Redis. Las respuestas
-incluyen `Retry-After`.
+proceso). En producción con varios workers se debe usar Redis. La respuesta
+`429` incluye `Retry-After`.
 
-En producción (`ENV=prod`) el arranque falla si `SECRET_KEY` es débil/menor a 32
-caracteres o si `COOKIE_SECURE=false`. Las cuentas demo del seed solo se crean
-con `--demo` y `ENV=dev|test`.
+Con `ENV` distinto de `dev`/`test` el arranque falla si `SECRET_KEY` es
+débil/menor a 32 caracteres o si `COOKIE_SECURE=false`. Las cuentas demo del
+seed solo se crean con `--demo` y `ENV=dev|test`.
 
 ## 6. API
 
@@ -195,15 +201,23 @@ datos validados
 
 `scripts/fetch_establishments.py`:
 
-1. Descarga el CSV DEIS/MINSAL (5.181 establecimientos vigentes, CC0).
-2. Lee `data/campuses.json` con las sedes Duoc UC geocodificadas.
+1. Descarga el CSV DEIS/MINSAL (snapshot 2026-10-20, CC0). El archivo tiene
+   5.782 filas; 5.354 figuran como vigentes y 5.022 quedan como candidatos tras
+   excluir cerrados, registros sin coordenadas y pediátricos/maternales/dentales.
+2. Lee `data/campuses.json` con las 19 sedes Duoc UC geocodificadas.
 3. Descarta pediátricos, maternales y dentales (MVP adulto general).
 4. Busca candidatos hasta 25 km y prioriza urgencias (hospital, clínica, SAPU,
-   SAR, SUR); garantiza 3 urgencias por sede y completa hasta 4 con CESFAM.
+   SAR, SUR); garantiza 3 urgencias por sede y completa hasta 4 con CESFAM u
+   otros no urgentes.
 5. Guarda 4 por sede, deduplicados, con código MINSAL, fuente y snapshot.
 
-Resultado actual: **76 establecimientos** para 19 sedes, **3 urgencias por sede**.
-El script falla si una sede no alcanza el mínimo.
+Resultado actual: **76 establecimientos** para 19 sedes: **57 con urgencia**
+(3 por sede) y 19 CESFAM de complemento. El script falla si una sede no alcanza
+el mínimo de 3 urgencias.
+
+`scripts/seed.py` es idempotente: actualiza los establecimientos y rangos
+existentes, y desactiva los establecimientos DEIS que ya no pertenecen al
+snapshot actual.
 
 ## 10. Distancia (Fase 3)
 
@@ -237,32 +251,50 @@ Variables en `.env`:
 
 | Variable | Descripción |
 |----------|-------------|
-| `DATABASE_URL` | Cadena SQLAlchemy/psycopg |
-| `SECRET_KEY` | Firma JWT (≥32 caracteres) |
-| `ENV` | `dev` / `prod` |
-| `COOKIE_SECURE` | `true` en HTTPS |
+| `DATABASE_URL` | Cadena SQLAlchemy/psycopg (dev: `:5434`; Docker: `db:5432`) |
+| `SECRET_KEY` | Firma JWT; ≥32 caracteres y no de ejemplo fuera de `dev`/`test` |
+| `ENV` | `dev` / `test` / `prod` (cualquier valor fuera de `dev`/`test` activa las guardas) |
+| `COOKIE_NAME` | Nombre de la cookie (por defecto `saluduoc_token`) |
+| `COOKIE_SECURE` | `true` obligatorio fuera de `dev`/`test` |
 | `TOKEN_TTL_MINUTES` | Vida de la sesión |
-| `RATE_LIMIT_LOGIN` | Intentos por minuto |
-| `TEST_DATABASE_URL` | Base para pytest |
+| `RATE_LIMIT_LOGIN` | Intentos fallidos permitidos por minuto |
+| `TEST_DATABASE_URL` | Base para pytest (servicio `db-test` en `:5433`) |
 
 ## 13. Tests
 
-- Unitarios: seguridad, rate limit, serialización.
-- Integración: registro, login, logout (incluida invalidación de token), `/me`,
-  RBAC, perfil, rate limit por cuenta, `/readyz` y errores 422 sin eco de
-  contraseñas.
-- Invariantes del seed (4 por sede, ≥3 urgencias, sin pediátricos/dentales).
-- Base de datos PostgreSQL real (servicio `db-test` en 5433).
+- **29 tests** contra PostgreSQL real (servicio `db-test` en `:5433`):
+  - `test_auth.py` (14): registro, login, logout con `token_version`, rate limit,
+    cookie HttpOnly, `/healthz`, `/readyz` y errores 422 sin eco de contraseñas.
+  - `test_config.py` (4): guardas de producción.
+  - `test_rbac.py` (4): acceso por rol.
+  - `test_seed_data.py` (2): invariantes del seed (4 por sede, ≥3 urgencias, sin
+    pediátricos/dentales).
+  - `test_users.py` (5): perfiles y listado admin.
 - CI: PostgreSQL 16 como service, `alembic upgrade head`, `alembic check`,
-  `pytest`, `ruff`.
+  `pytest` y `ruff`.
 
 ## 14. Despliegue
 
-- `docker compose up -d db db-test`
+Desarrollo:
+
+- `docker compose up -d db db-test` (Postgres dev en `:5434`, test en `:5433`)
 - `alembic upgrade head`
-- `python scripts/fetch_establishments.py`
-- `python scripts/seed.py`
-- `uvicorn app.main:app`
+- `python scripts/fetch_establishments.py` (opcional si ya existe el JSON)
+- `python scripts/seed.py --demo` (las cuentas demo solo en `dev`/`test`)
+- `uvicorn app.main:app --reload`
+
+Docker:
+
+- `docker compose build app`
+- `docker compose run --rm app alembic upgrade head`
+- `docker compose run --rm app python scripts/seed.py --demo`
+- `docker compose up app`
+
+La imagen corre como usuario no root (UID 10001) y define un `HEALTHCHECK`
+contra `/healthz`. El compose usa `/readyz` como readiness. El compose de
+desarrollo publica la base en `:5434` y la app accede por
+`host.docker.internal:5434`; en un despliegue normal usar
+`postgresql+psycopg://saluduoc:saluduoc@db:5432/saluduoc`.
 
 En producción: HTTPS, `COOKIE_SECURE=true`, `SECRET_KEY` fuerte, Postgres
 gestionado, backups y rate limit distribuido.
