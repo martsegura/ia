@@ -7,9 +7,10 @@ prd-id: 9ab3b43b-fde8-4977-b3dc-a9e57b27de7b
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_user_optional
 from app.core.config import settings
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
@@ -42,7 +43,14 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> UserOut
     )
     user.patient_profile = PatientProfile()
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ya existe una cuenta con ese correo",
+        ) from None
     db.refresh(user)
     return user_out(user)
 
@@ -51,29 +59,33 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> UserOut
 def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)):
     """Valida credenciales y deja el JWT en una cookie HttpOnly."""
     client_ip = request.client.host if request.client else "desconocido"
-    if login_limiter.is_blocked(client_ip, settings.RATE_LIMIT_LOGIN):
+    email = payload.email.lower().strip()
+    rate_key = f"{client_ip}:{email}"
+
+    if login_limiter.is_blocked(rate_key, settings.RATE_LIMIT_LOGIN):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Demasiados intentos fallidos. Intenta nuevamente en un minuto",
+            headers={"Retry-After": "60"},
         )
 
-    email = payload.email.lower().strip()
     user = db.scalar(select(User).where(User.email == email))
     if user is None or not verify_password(payload.password, user.password_hash):
-        login_limiter.register_failure(client_ip)
+        login_limiter.register_failure(rate_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Correo o contraseña incorrectos",
         )
 
     if not user.is_active:
+        login_limiter.register_failure(rate_key)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="La cuenta está desactivada",
         )
 
-    login_limiter.reset(client_ip)
-    token = create_access_token(user.id, user.role.value)
+    login_limiter.reset(rate_key)
+    token = create_access_token(user.id, user.role.value, user.token_version)
     response = JSONResponse(content=user_out(user).model_dump(mode="json"))
     response.set_cookie(
         key=settings.COOKIE_NAME,
@@ -88,8 +100,16 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
 
 
 @router.post("/logout", response_model=MessageResponse)
-def logout() -> JSONResponse:
-    """Elimina la cookie de sesión."""
+def logout(
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+) -> JSONResponse:
+    """Invalida la sesión actual y elimina la cookie."""
+    if current_user is not None:
+        current_user.token_version += 1
+        db.add(current_user)
+        db.commit()
+
     response = JSONResponse(content={"message": "Sesión cerrada"})
     response.delete_cookie(settings.COOKIE_NAME, path="/")
     return response

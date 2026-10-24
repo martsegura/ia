@@ -87,3 +87,60 @@ def test_login_rate_limit(client, make_user):
 
 def test_me_without_cookie_returns_401(client):
     assert client.get("/api/v1/auth/me").status_code == 401
+
+
+def test_validation_error_does_not_echo_password(client):
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": unique_email("echo"), "password": "sololetras", "full_name": "Eco"},
+    )
+    assert response.status_code == 422
+    assert "sololetras" not in response.text
+
+
+def test_full_name_with_only_spaces_is_rejected(client):
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": unique_email("spaces"), "password": PASSWORD, "full_name": "    "},
+    )
+    assert response.status_code == 422
+
+
+def test_rate_limit_not_bypassed_by_another_account(client, make_user):
+    victim = make_user()
+    attacker = make_user()
+    for _ in range(5):
+        assert (
+            client.post(
+                "/api/v1/auth/login",
+                json={"email": victim.email, "password": "MalaClave1"},
+            ).status_code
+            == 401
+        )
+    assert (
+        client.post(
+            "/api/v1/auth/login", json={"email": attacker.email, "password": PASSWORD}
+        ).status_code
+        == 200
+    )
+    blocked = client.post(
+        "/api/v1/auth/login", json={"email": victim.email, "password": PASSWORD}
+    )
+    assert blocked.status_code == 429
+
+
+def test_logout_invalidates_copied_token(client, make_user):
+    user = make_user()
+    client.post("/api/v1/auth/login", json={"email": user.email, "password": PASSWORD})
+    token = client.cookies.get("saluduoc_token")
+    assert token
+
+    assert client.post("/api/v1/auth/logout").status_code == 200
+    client.cookies.set("saluduoc_token", token)
+    assert client.get("/api/v1/auth/me").status_code == 401
+
+
+def test_readyz_checks_database(client):
+    response = client.get("/readyz")
+    assert response.status_code == 200
+    assert response.json()["status"] == "ready"

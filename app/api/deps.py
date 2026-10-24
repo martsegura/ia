@@ -13,32 +13,39 @@ from app.models.enums import UserRole
 from app.models.user import User
 
 
-def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
-    """Lee el JWT desde la cookie HttpOnly y devuelve el usuario activo."""
+def _load_user_from_token(request: Request, db: Session) -> User | None:
     token = request.cookies.get(settings.COOKIE_NAME)
     if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No autenticado",
-            headers={"WWW-Authenticate": "Cookie"},
-        )
-
+        return None
     try:
         payload = decode_access_token(token)
         user_id = UUID(payload["sub"])
-    except (jwt.PyJWTError, KeyError, ValueError):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Sesión inválida o expirada",
-        ) from None
+    except (jwt.PyJWTError, KeyError, TypeError, ValueError):
+        return None
 
     user = db.get(User, user_id)
     if user is None or not user.is_active:
+        return None
+    if int(payload.get("ver", 0)) != user.token_version:
+        return None
+    return user
+
+
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
+    """Lee el JWT desde la cookie HttpOnly y devuelve el usuario activo."""
+    user = _load_user_from_token(request, db)
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuario no encontrado o inactivo",
+            detail="No autenticado o sesión expirada",
+            headers={"WWW-Authenticate": "Cookie"},
         )
     return user
+
+
+def get_current_user_optional(request: Request, db: Session = Depends(get_db)) -> User | None:
+    """Igual que get_current_user, pero devuelve None si no hay sesión válida."""
+    return _load_user_from_token(request, db)
 
 
 def require_roles(*roles: UserRole):

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import Boolean, Float, Integer, String, Uuid
+from sqlalchemy import Boolean, Float, Integer, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -15,6 +15,9 @@ class NormalRange(TimestampMixin, Base):
     """Umbrales por métrica. Ej.: FC normal 60-100, leve 50-59/101-120."""
 
     __tablename__ = "normal_ranges"
+    __table_args__ = (
+        UniqueConstraint("metric", "version", name="uq_normal_ranges_metric_version"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     metric: Mapped[str] = mapped_column(String(50), index=True, nullable=False)

@@ -18,7 +18,10 @@ class RegisterRequest(BaseModel):
     @field_validator("full_name")
     @classmethod
     def nombre_limpio(cls, value: str) -> str:
-        return " ".join(value.split())
+        normalized = " ".join(value.split())
+        if len(normalized) < 2:
+            raise ValueError("El nombre completo debe tener al menos 2 caracteres")
+        return normalized
 
 
 class LoginRequest(BaseModel):

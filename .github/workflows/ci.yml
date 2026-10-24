@@ -35,6 +35,8 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Migrar base de datos
         run: alembic upgrade head
+      - name: Verificar que no hay drift de migraciones
+        run: alembic check
       - name: Tests
         run: pytest -q
 

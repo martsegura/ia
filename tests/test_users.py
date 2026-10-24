@@ -42,6 +42,8 @@ def test_admin_can_list_users(client, make_user):
     body = response.json()
     assert body["total"] >= 1
     assert any(item["email"] == admin.email for item in body["items"])
+    # El listado no debe exponer perfiles clínicos completos.
+    assert all(item["profile"] is None for item in body["items"])
 
 
 def test_doctor_can_update_specialty(client, make_user):

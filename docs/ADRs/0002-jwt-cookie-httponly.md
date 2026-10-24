@@ -5,8 +5,9 @@ La app maneja datos de salud sensibles y debe evitar el robo de tokens por XSS.
 
 ## Decisión
 JWT HS256 firmado en el servidor, enviado en cookie `HttpOnly`, `SameSite=Lax`,
-`Secure` en producción. Roles en el claim `role` y validación adicional contra
-la base de datos.
+`Secure` en producción. Incluye `ver` (versión de sesión) que se compara con
+`users.token_version`; el logout la incrementa y revoca todos los tokens
+anteriores. Los roles se validan contra la base de datos.
 
 ## Alternativas
 - JWT en `localStorage` + `Authorization: Bearer`.

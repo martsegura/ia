@@ -30,7 +30,7 @@ def profile_dict(user: User) -> dict | None:
     return None
 
 
-def user_out(user: User) -> UserOut:
+def user_out(user: User, include_profile: bool = True) -> UserOut:
     return UserOut(
         id=user.id,
         email=user.email,
@@ -38,5 +38,5 @@ def user_out(user: User) -> UserOut:
         full_name=user.full_name,
         is_active=user.is_active,
         created_at=user.created_at,
-        profile=profile_dict(user),
+        profile=profile_dict(user) if include_profile else None,
     )

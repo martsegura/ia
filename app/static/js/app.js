@@ -3,10 +3,11 @@
  * Todas las peticiones incluyen la cookie HttpOnly de sesión.
  */
 const api = async (path, options = {}) => {
+  const { headers, ...rest } = options;
   const response = await fetch(`/api/v1${path}`, {
+    ...rest,
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options,
+    headers: { "Content-Type": "application/json", ...(headers || {}) },
   });
 
   let data = null;
@@ -17,7 +18,16 @@ const api = async (path, options = {}) => {
   }
 
   if (!response.ok) {
-    const detail = typeof data?.detail === "string" ? data.detail : "Error inesperado";
+    let detail = "Error inesperado";
+    if (typeof data?.detail === "string") {
+      detail = data.detail;
+    } else if (Array.isArray(data?.detail)) {
+      detail = data.detail.map((item) => item.msg || "Dato inválido").join(". ");
+    }
+
+    if (response.status === 401 && !["/login", "/registro"].includes(window.location.pathname)) {
+      window.location.href = "/login";
+    }
     throw new Error(detail);
   }
   return data;
@@ -25,8 +35,33 @@ const api = async (path, options = {}) => {
 
 window.SaluDuoc = { api };
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const message = document.getElementById("message");
+
+  // Navegación según sesión: muestra "Cerrar sesión" cuando hay usuario.
+  const nav = document.querySelector(".nav");
+  if (nav && !["/login", "/registro"].includes(window.location.pathname)) {
+    try {
+      const user = await api("/auth/me");
+      const label = document.createElement("span");
+      label.className = "muted";
+      label.textContent = user.full_name;
+      const logout = document.createElement("button");
+      logout.type = "button";
+      logout.className = "btn btn-sm";
+      logout.textContent = "Cerrar sesión";
+      logout.addEventListener("click", async () => {
+        try {
+          await api("/auth/logout", { method: "POST" });
+        } finally {
+          window.location.href = "/login";
+        }
+      });
+      nav.replaceChildren(label, logout);
+    } catch (_) {
+      /* visitante */
+    }
+  }
 
   const showMessage = (text, type = "error") => {
     if (!message) return;

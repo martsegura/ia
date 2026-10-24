@@ -53,8 +53,11 @@ mis datos de salud.
 - Registro con nombre, correo y contraseña (mínimo 8 caracteres y un número).
 - El correo es único; un duplicado responde `409`.
 - Login correcto deja una cookie HttpOnly `saluduoc_token` y responde `200`.
-- Credenciales inválidas responden `401`; 5 fallos por minuto bloquean con `429`.
-- Logout elimina la cookie y `/auth/me` vuelve a responder `401`.
+- Credenciales inválidas responden `401`; 5 fallos por minuto por IP+correo
+  bloquean con `429` (un login exitoso de otra cuenta no limpia el bloqueo).
+- Logout invalida los tokens emitidos y `/auth/me` vuelve a responder `401`.
+- Los errores de validación no reflejan la contraseña enviada.
+- En producción no se permite un `SECRET_KEY` débil ni cookies sin `Secure`.
 
 ### 4.2 Perfil del paciente
 
@@ -62,6 +65,7 @@ mis datos de salud.
 medicamentos y contacto de emergencia **para** que el triage sea más preciso.
 
 - `GET/PATCH /api/v1/users/me` devuelve y actualiza el perfil.
+- El listado admin muestra datos de cuenta, no el perfil clínico completo.
 - Los campos son opcionales, pero si faltan datos críticos el triage aplica un
   mínimo conservador de C3.
 - Un paciente no puede ver datos de otro paciente.
@@ -177,7 +181,8 @@ Rangos iniciales (adulto, MINSAL, a validar por un profesional):
 - 100% de las categorizaciones con explicación y reglas activadas.
 - 0 accesos de pacientes a datos de otros pacientes.
 - Cobertura de tests del backend ≥ 80% en las fases 1–4.
-- Al menos 3 establecimientos con urgencia por sede Duoc UC en el seed.
+- 3 establecimientos con urgencia por cada una de las 19 sedes en el seed.
+- 29 tests de backend en verde en la Fase 0.
 
 ## 9. Riesgos
 
@@ -193,7 +198,7 @@ Rangos iniciales (adulto, MINSAL, a validar por un profesional):
 
 | Fase | Alcance | Estado |
 |------|---------|--------|
-| 0 | Scaffold, Docker, Alembic, auth, RBAC, seed base, CI | Completada |
+| 0 | Scaffold, Docker, Alembic, auth, RBAC, seed base, CI | Completada (29 tests) |
 | 1 | Perfil completo, carga de vitales, JSON de ejemplo | Pendiente |
 | 2 | Rangos, reglas y motor de triage | Pendiente |
 | 3 | Establecimientos y distancia en la UI | Pendiente |

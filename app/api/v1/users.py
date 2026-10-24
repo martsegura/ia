@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user, require_roles
 from app.db.session import get_db
@@ -69,6 +69,12 @@ def list_users(
     """Lista paginada de usuarios. Solo administradores."""
     total = db.scalar(select(func.count()).select_from(User)) or 0
     users = db.scalars(
-        select(User).order_by(User.created_at.desc()).limit(limit).offset(offset)
+        select(User)
+        .options(selectinload(User.patient_profile), selectinload(User.doctor_profile))
+        .order_by(User.created_at.desc(), User.id)
+        .limit(limit)
+        .offset(offset)
     ).all()
-    return UserListResponse(items=[user_out(user) for user in users], total=total)
+    return UserListResponse(
+        items=[user_out(user, include_profile=False) for user in users], total=total
+    )

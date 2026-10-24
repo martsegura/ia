@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
-"""Carga idempotente de datos iniciales de SaluDuoc."""
+"""Carga idempotente de datos iniciales de SaluDuoc.
+
+Uso:
+    python scripts/seed.py          # establecimientos + rangos
+    python scripts/seed.py --demo   # además crea las cuentas demo
+"""
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from datetime import date
@@ -11,8 +17,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from sqlalchemy import select  # noqa: E402
+from sqlalchemy import select, update  # noqa: E402
 
+from app.core.config import settings  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
 from app.db.session import SessionLocal  # noqa: E402
 from app.models import (  # noqa: E402
@@ -38,7 +45,9 @@ def load_json(name: str) -> list[dict]:
 
 def seed_establishments(db) -> int:
     count = 0
-    for item in load_json("establishments.json"):
+    items = load_json("establishments.json")
+    managed_codes = [item["codigo"] for item in items]
+    for item in items:
         existing = db.scalar(select(Establishment).where(Establishment.codigo == item["codigo"]))
         if existing is None:
             existing = Establishment(codigo=item["codigo"])
@@ -60,6 +69,17 @@ def seed_establishments(db) -> int:
             date.fromisoformat(item["fecha_snapshot"]) if item.get("fecha_snapshot") else None
         )
         existing.is_active = True
+
+    # Desactiva establecimientos DEIS que ya no pertenecen al snapshot actual.
+    if managed_codes:
+        db.execute(
+            update(Establishment)
+            .where(
+                Establishment.fuente.like("DEIS MINSAL%"),
+                ~Establishment.codigo.in_(managed_codes),
+            )
+            .values(is_active=False)
+        )
     return count
 
 
@@ -94,6 +114,7 @@ def seed_normal_ranges(db) -> int:
         existing.is_informational = bool(item.get("is_informational"))
         existing.fuente = item.get("fuente")
         existing.is_active = True
+
     return count
 
 
@@ -129,8 +150,13 @@ def seed_users(db) -> None:
         db, "medico@demo.cl", "Dra. Valentina Soto", UserRole.DOCTOR
     )
     establishment = db.scalar(
-        select(Establishment).order_by(Establishment.sede_duoc, Establishment.nombre)
+        select(Establishment)
+        .where(Establishment.sede_duoc == "Sede Alameda")
+        .order_by(Establishment.tiene_urgencia.desc(), Establishment.nombre)
+        .limit(1)
     )
+    if establishment is None:
+        establishment = db.scalar(select(Establishment).order_by(Establishment.nombre).limit(1))
     if doctor.doctor_profile is None:
         doctor.doctor_profile = DoctorProfile(
             especialidad="Medicina de Urgencia",
@@ -141,13 +167,31 @@ def seed_users(db) -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Carga los datos iniciales de SaluDuoc")
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Crea las cuentas demo (solo permitido en dev/test)",
+    )
+    args = parser.parse_args()
+
+    if args.demo and settings.ENV not in ("dev", "test"):
+        raise SystemExit(
+            "ERROR: las cuentas demo con contraseña fija solo se permiten con ENV=dev o ENV=test"
+        )
+
     with SessionLocal() as db:
         new_establishments = seed_establishments(db)
+        db.flush()
         new_ranges = seed_normal_ranges(db)
-        seed_users(db)
+        db.flush()
+        if args.demo:
+            seed_users(db)
         db.commit()
 
-        total_establishments = db.query(Establishment).count()
+        total_establishments = (
+            db.query(Establishment).filter(Establishment.is_active.is_(True)).count()
+        )
         total_ranges = db.query(NormalRange).count()
         total_users = db.query(User).count()
 
@@ -155,8 +199,9 @@ def main() -> None:
     print(f"  Establecimientos: {total_establishments} ({new_establishments} nuevos)")
     print(f"  Rangos normales:  {total_ranges} ({new_ranges} nuevos)")
     print(f"  Usuarios:         {total_users}")
-    print("\nCuentas demo (password Demo123!):")
-    print("  paciente@demo.cl | medico@demo.cl | admin@demo.cl")
+    if args.demo:
+        print("\nCuentas demo (password Demo123!):")
+        print("  paciente@demo.cl | medico@demo.cl | admin@demo.cl")
 
 
 if __name__ == "__main__":

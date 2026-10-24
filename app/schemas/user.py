@@ -4,7 +4,7 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.models.enums import UserRole
 
@@ -33,6 +33,16 @@ class ProfileUpdate(BaseModel):
     es_embarazada: bool | None = None
     contacto_emergencia: str | None = Field(default=None, max_length=150)
     especialidad: str | None = Field(default=None, max_length=120)
+
+    @field_validator("full_name")
+    @classmethod
+    def nombre_limpio(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = " ".join(value.split())
+        if len(normalized) < 2:
+            raise ValueError("El nombre completo debe tener al menos 2 caracteres")
+        return normalized
 
 
 class UserListResponse(BaseModel):

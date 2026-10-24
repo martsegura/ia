@@ -20,6 +20,8 @@ TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
     "postgresql+psycopg://saluduoc:saluduoc@localhost:5433/saluduoc_test",
 )
+if "test" not in TEST_DATABASE_URL.lower():
+    raise RuntimeError("TEST_DATABASE_URL debe apuntar a una base de datos de pruebas")
 
 from app.core.security import hash_password  # noqa: E402
 from app.db.base import Base  # noqa: E402

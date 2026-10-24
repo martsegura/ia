@@ -25,12 +25,13 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
-def create_access_token(subject: UUID | str, role: str) -> str:
-    """Crea un JWT con el id de usuario y su rol."""
+def create_access_token(subject: UUID | str, role: str, token_version: int = 0) -> str:
+    """Crea un JWT con id de usuario, rol y versión de sesión."""
     now = datetime.now(timezone.utc)
     payload = {
         "sub": str(subject),
         "role": role,
+        "ver": token_version,
         "iat": now,
         "exp": now + timedelta(minutes=settings.TOKEN_TTL_MINUTES),
     }
@@ -38,5 +39,10 @@ def create_access_token(subject: UUID | str, role: str) -> str:
 
 
 def decode_access_token(token: str) -> dict:
-    """Decodifica un JWT. Lanza jwt.PyJWTError si es inválido o expiró."""
-    return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+    """Decodifica un JWT exigiendo exp y sub."""
+    return jwt.decode(
+        token,
+        settings.SECRET_KEY,
+        algorithms=[ALGORITHM],
+        options={"require": ["exp", "sub"]},
+    )

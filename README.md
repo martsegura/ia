@@ -28,7 +28,7 @@ pip install -e ".[dev]"
 
 alembic upgrade head
 python scripts/fetch_establishments.py   # genera data/seed/establishments.json
-python scripts/seed.py
+python scripts/seed.py --demo
 
 uvicorn app.main:app --reload
 ```
@@ -54,7 +54,7 @@ docker compose up -d db
 docker compose build app
 docker compose run --rm app alembic upgrade head
 docker compose run --rm app python scripts/fetch_establishments.py
-docker compose run --rm app python scripts/seed.py
+docker compose run --rm app python scripts/seed.py --demo
 docker compose up app
 ```
 

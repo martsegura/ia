@@ -102,13 +102,21 @@ timestamps.
 
 1. `POST /auth/login` valida Argon2 y firma un JWT HS256 con `sub` y `role`.
 2. El token se envía en la cookie `saluduoc_token` (`HttpOnly`, `SameSite=Lax`,
-   `Secure` según configuración, `Max-Age` = TTL).
-3. `get_current_user` lee la cookie, valida el JWT y carga el usuario activo.
+   `Secure` según configuración, `Max-Age` = TTL). Incluye `ver` (versión de
+   sesión).
+3. `get_current_user` lee la cookie, valida el JWT, comprueba `ver` contra
+   `users.token_version` y carga el usuario activo.
 4. `require_roles(*roles)` protege endpoints por rol.
-5. Logout elimina la cookie.
+5. Logout incrementa `token_version` (invalida todos los tokens emitidos) y
+   elimina la cookie.
 
-Rate limit de login: 5 fallos por IP por minuto (en memoria, un proceso). En
-producción con varios workers se debe usar Redis.
+Rate limit de login: 5 fallos por `IP + email` por minuto (en memoria, un
+proceso). En producción con varios workers se debe usar Redis. Las respuestas
+incluyen `Retry-After`.
+
+En producción (`ENV=prod`) el arranque falla si `SECRET_KEY` es débil/menor a 32
+caracteres o si `COOKIE_SECURE=false`. Las cuentas demo del seed solo se crean
+con `--demo` y `ENV=dev|test`.
 
 ## 6. API
 
@@ -116,14 +124,15 @@ producción con varios workers se debe usar Redis.
 
 | Método | Ruta | Rol | Descripción |
 |--------|------|-----|-------------|
-| GET | `/healthz` | público | Estado del servicio |
+| GET | `/healthz` | público | Liveness del proceso |
+| GET | `/readyz` | público | Readiness (consulta la base de datos) |
 | POST | `/api/v1/auth/register` | público | Registro de paciente |
 | POST | `/api/v1/auth/login` | público | Login + cookie |
 | POST | `/api/v1/auth/logout` | autenticado | Cierra sesión |
 | GET | `/api/v1/auth/me` | autenticado | Usuario actual |
 | GET | `/api/v1/users/me` | autenticado | Perfil propio |
 | PATCH | `/api/v1/users/me` | autenticado | Actualiza perfil |
-| GET | `/api/v1/users` | admin | Lista paginada |
+| GET | `/api/v1/users` | admin | Lista paginada (sin perfiles clínicos) |
 
 ### Planificado
 
@@ -188,11 +197,13 @@ datos validados
 
 1. Descarga el CSV DEIS/MINSAL (5.181 establecimientos vigentes, CC0).
 2. Lee `data/campuses.json` con las sedes Duoc UC geocodificadas.
-3. Filtra establecimientos a ≤3 km (amplía a 6/12/25 km si faltan).
-4. Prioriza urgencias (hospital, clínica, SAPU, SAR, SUR), luego CESFAM.
+3. Descarta pediátricos, maternales y dentales (MVP adulto general).
+4. Busca candidatos hasta 25 km y prioriza urgencias (hospital, clínica, SAPU,
+   SAR, SUR); garantiza 3 urgencias por sede y completa hasta 4 con CESFAM.
 5. Guarda 4 por sede, deduplicados, con código MINSAL, fuente y snapshot.
 
-Resultado actual: **76 establecimientos** para 19 sedes.
+Resultado actual: **76 establecimientos** para 19 sedes, **3 urgencias por sede**.
+El script falla si una sede no alcanza el mínimo.
 
 ## 10. Distancia (Fase 3)
 
@@ -237,9 +248,13 @@ Variables en `.env`:
 ## 13. Tests
 
 - Unitarios: seguridad, rate limit, serialización.
-- Integración: registro, login, logout, `/me`, RBAC, perfil.
+- Integración: registro, login, logout (incluida invalidación de token), `/me`,
+  RBAC, perfil, rate limit por cuenta, `/readyz` y errores 422 sin eco de
+  contraseñas.
+- Invariantes del seed (4 por sede, ≥3 urgencias, sin pediátricos/dentales).
 - Base de datos PostgreSQL real (servicio `db-test` en 5433).
-- CI: PostgreSQL 16 como service, `alembic upgrade head`, `pytest`, `ruff`.
+- CI: PostgreSQL 16 como service, `alembic upgrade head`, `alembic check`,
+  `pytest`, `ruff`.
 
 ## 14. Despliegue
 
