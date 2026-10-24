@@ -20,7 +20,7 @@ const api = async (path, options = {}) => {
   if (!response.ok) {
     let detail = "Error inesperado";
     if (typeof data?.detail === "string") {
-      detail = data.detail;
+      detail = traducirError(data.detail);
     } else if (Array.isArray(data?.detail)) {
       detail = data.detail.map((item) => traducirError(item.msg || "Dato inválido")).join(". ");
     }
@@ -49,41 +49,42 @@ const traducirError = (message) => {
   return limpio;
 };
 
+const ROLE_HOME = {
+  patient: "/paciente",
+  doctor: "/medico",
+  admin: "/admin",
+};
+
 window.SaluDuoc = { api };
 
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
   const message = document.getElementById("message");
-
-  // Navegación según sesión: muestra "Cerrar sesión" cuando hay usuario.
-  const nav = document.querySelector(".nav");
-  if (nav && !["/login", "/registro"].includes(window.location.pathname)) {
-    try {
-      const user = await api("/auth/me");
-      const label = document.createElement("span");
-      label.className = "muted";
-      label.textContent = user.full_name;
-      const logout = document.createElement("button");
-      logout.type = "button";
-      logout.className = "btn btn-sm";
-      logout.textContent = "Cerrar sesión";
-      logout.addEventListener("click", async () => {
-        try {
-          await api("/auth/logout", { method: "POST" });
-        } finally {
-          window.location.href = "/login";
-        }
-      });
-      nav.replaceChildren(label, logout);
-    } catch (_) {
-      /* visitante */
-    }
-  }
 
   const showMessage = (text, type = "error") => {
     if (!message) return;
     message.textContent = text;
     message.className = `message ${type}`;
   };
+
+  const logoutButton = document.getElementById("logout-btn");
+  if (logoutButton) {
+    logoutButton.addEventListener("click", async () => {
+      try {
+        await api("/auth/logout", { method: "POST" });
+      } finally {
+        window.location.href = "/login";
+      }
+    });
+  }
+
+  // Rellenar credenciales demo (solo visible en dev/test).
+  document.querySelectorAll(".demo-fill").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.getElementById("email").value = button.dataset.email;
+      document.getElementById("password").value = "Demo123!";
+      showMessage("Credenciales demo cargadas. Presiona Entrar.", "ok");
+    });
+  });
 
   const loginForm = document.getElementById("login-form");
   if (loginForm) {
@@ -101,7 +102,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           }),
         });
         showMessage(`Bienvenido, ${user.full_name}`, "ok");
-        window.location.href = "/";
+        window.location.href = ROLE_HOME[user.role] || "/";
       } catch (error) {
         showMessage(error.message);
       } finally {
@@ -109,15 +110,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
-
-  // Rellenar credenciales demo (solo visible en dev/test).
-  document.querySelectorAll(".demo-fill").forEach((button) => {
-    button.addEventListener("click", () => {
-      document.getElementById("email").value = button.dataset.email;
-      document.getElementById("password").value = "Demo123!";
-      showMessage("Credenciales demo cargadas. Presiona Entrar.", "ok");
-    });
-  });
 
   const registerForm = document.getElementById("register-form");
   if (registerForm) {
@@ -136,7 +128,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           }),
         });
         showMessage("Cuenta creada. Entrando a tu sesión...", "ok");
-        setTimeout(() => (window.location.href = "/"), 700);
+        // El registro deja la cookie de sesión: vamos directo al panel.
+        setTimeout(() => (window.location.href = "/paciente"), 700);
       } catch (error) {
         showMessage(error.message);
       } finally {

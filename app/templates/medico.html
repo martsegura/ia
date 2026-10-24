@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Panel médico · SaluDuoc{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <span class="pill pill-doctor">Médico</span>
+    <h1>Hola, {{ user.full_name }}</h1>
+    <p class="muted">
+      {% if doctor_profile and doctor_profile.especialidad %}{{ doctor_profile.especialidad }}{% else %}Medicina de Urgencia{% endif %}
+      {% if establishment %} · {{ establishment.nombre }}{% endif %}
+    </p>
+  </div>
+</section>
+
+<div class="stat-grid">
+  <article class="stat-card">
+    <span>Pacientes en cola</span>
+    <strong>{{ queue_count }}</strong>
+    <small>Cola de espera</small>
+  </article>
+  <article class="stat-card stat-red">
+    <span>C1 / C2</span>
+    <strong>{{ critical_count }}</strong>
+    <small>Requieren atención inmediata</small>
+  </article>
+  <article class="stat-card stat-yellow">
+    <span>En atención</span>
+    <strong>{{ in_attention_count }}</strong>
+    <small>Pacientes siendo atendidos</small>
+  </article>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Cola de espera</h2>
+    <span class="badge badge-info">Fase 4</span>
+  </div>
+  <div class="empty-state">
+    <p><strong>La cola estará disponible en la Fase 4.</strong></p>
+    <p>Aquí verás a los pacientes ordenados por categoría y hora de llegada, con los colores del triage chileno.</p>
+    <ul class="legend">
+      <li><span class="dot dot-red"></span> C1 y C2 · Atención inmediata</li>
+      <li><span class="dot dot-yellow"></span> C3 · Urgencia con riesgo</li>
+      <li><span class="dot dot-green"></span> C4 y C5 · Atención general</li>
+    </ul>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Mi establecimiento</h2>
+  {% if establishment %}
+  <dl class="profile-grid">
+    <div class="profile-wide"><dt>Nombre</dt><dd>{{ establishment.nombre }}</dd></div>
+    <div><dt>Comuna</dt><dd>{{ establishment.comuna or "Sin dato" }}</dd></div>
+    <div><dt>Tipo</dt><dd>{{ establishment.tipo }}</dd></div>
+    <div class="profile-wide"><dt>Dirección</dt><dd>{{ establishment.direccion or "Sin dato" }}</dd></div>
+    <div><dt>Teléfono</dt><dd>{{ establishment.telefono or "Sin dato" }}</dd></div>
+    <div>
+      <dt>Urgencias</dt>
+      <dd>{% if establishment.tiene_urgencia %}<span class="badge badge-ok">Sí</span>{% else %}<span class="badge">No</span>{% endif %}</dd>
+    </div>
+  </dl>
+  {% else %}
+  <p class="empty-state">No tienes un establecimiento asignado. Pide al administrador que lo configure.</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -143,6 +143,21 @@ seed solo se crean con `--demo` y `ENV=dev|test`.
 | PATCH | `/api/v1/users/me` | autenticado | Actualiza perfil |
 | GET | `/api/v1/users` | admin | Lista paginada (sin perfiles clínicos) |
 
+### Páginas (Fase 0)
+
+| Ruta | Rol | Descripción |
+|------|-----|-------------|
+| `/` | público | Landing; si hay sesión muestra acceso al panel |
+| `/login` | público | Login; redirige al panel si ya hay sesión |
+| `/registro` | público | Registro de paciente con auto-login |
+| `/paciente` | patient | Perfil, estado y próximos pasos |
+| `/medico` | doctor | Cola placeholder y establecimiento asignado |
+| `/admin` | admin | Métricas, establecimientos y usuarios recientes |
+| `/dashboard` | autenticado | Redirige al panel según el rol |
+
+Las páginas se protegen en el servidor: sin sesión redirigen a `/login`; con un
+rol distinto redirigen al panel correspondiente (HTTP 303).
+
 ### Planificado
 
 ```

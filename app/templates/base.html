@@ -4,14 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}SaluDuoc{% endblock %}</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=0.1.0">
+  <link rel="stylesheet" href="/static/css/style.css?v=0.2.0">
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/">Salu<span>Duoc</span></a>
+    <a class="brand" href="{% if user %}{{ home_path }}{% else %}/{% endif %}">Salu<span>Duoc</span></a>
     <nav class="nav">
-      <a href="/login">Iniciar sesión</a>
-      <a class="btn btn-sm" href="/registro">Crear cuenta</a>
+      {% if user %}
+        <a href="{{ home_path }}">Mi panel</a>
+        <span class="nav-user">{{ user.full_name }}</span>
+        <button type="button" class="btn btn-sm" id="logout-btn">Cerrar sesión</button>
+      {% else %}
+        <a href="/login">Iniciar sesión</a>
+        <a class="btn btn-sm" href="/registro">Crear cuenta</a>
+      {% endif %}
     </nav>
   </header>
 
@@ -23,7 +29,7 @@
     SaluDuoc es un prototipo de apoyo a la categorización de urgencia. No reemplaza la evaluación de un profesional de la salud.
   </footer>
 
-  <script src="/static/js/app.js?v=0.1.0"></script>
+  <script src="/static/js/app.js?v=0.2.0"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -8,20 +8,31 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import text
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.api.deps import load_user_from_token
 from app.api.v1.auth import router as auth_router
 from app.api.v1.users import router as users_router
 from app.core.config import settings
 from app.db.session import get_db
+from app.models.enums import UserRole
+from app.models.establishment import Establishment
+from app.models.normal_range import NormalRange
+from app.models.user import User
 
 BASE_DIR = Path(__file__).resolve().parent
 IS_PROD = settings.ENV == "prod"
+
+ROLE_HOME = {
+    UserRole.PATIENT: "/paciente",
+    UserRole.DOCTOR: "/medico",
+    UserRole.ADMIN: "/admin",
+}
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -37,6 +48,29 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
+
+
+def home_for(user: User) -> str:
+    return ROLE_HOME.get(user.role, "/")
+
+
+def base_context(request: Request, user: User | None = None) -> dict:
+    return {
+        "app_name": settings.APP_NAME,
+        "user": user,
+        "home_path": home_for(user) if user else None,
+        "show_demo": settings.ENV in ("dev", "test"),
+    }
+
+
+def require_page_user(request: Request, db: Session, *roles: UserRole):
+    """Devuelve (user, redirect). Si no hay sesión o el rol no corresponde, redirige."""
+    user = load_user_from_token(request, db)
+    if user is None:
+        return None, RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
+    if roles and user.role not in roles:
+        return None, RedirectResponse(home_for(user), status_code=status.HTTP_303_SEE_OTHER)
+    return user, None
 
 
 @app.middleware("http")
@@ -82,26 +116,91 @@ def readyz(db: Session = Depends(get_db)) -> dict[str, str]:
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
-def index(request: Request) -> HTMLResponse:
+def index(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
+    user = load_user_from_token(request, db)
     return templates.TemplateResponse(
-        request=request, name="index.html", context={"app_name": settings.APP_NAME}
+        request=request, name="index.html", context=base_context(request, user)
     )
 
 
 @app.get("/login", response_class=HTMLResponse, include_in_schema=False)
-def login_page(request: Request) -> HTMLResponse:
+def login_page(request: Request, db: Session = Depends(get_db)):
+    user = load_user_from_token(request, db)
+    if user is not None:
+        return RedirectResponse(home_for(user), status_code=status.HTTP_303_SEE_OTHER)
     return templates.TemplateResponse(
-        request=request,
-        name="login.html",
-        context={
-            "app_name": settings.APP_NAME,
-            "show_demo": settings.ENV in ("dev", "test"),
-        },
+        request=request, name="login.html", context=base_context(request)
     )
 
 
 @app.get("/registro", response_class=HTMLResponse, include_in_schema=False)
-def register_page(request: Request) -> HTMLResponse:
+def register_page(request: Request, db: Session = Depends(get_db)):
+    user = load_user_from_token(request, db)
+    if user is not None:
+        return RedirectResponse(home_for(user), status_code=status.HTTP_303_SEE_OTHER)
     return templates.TemplateResponse(
-        request=request, name="register.html", context={"app_name": settings.APP_NAME}
+        request=request, name="register.html", context=base_context(request)
     )
+
+
+@app.get("/dashboard", include_in_schema=False)
+def dashboard(request: Request, db: Session = Depends(get_db)):
+    user, redirect = require_page_user(request, db)
+    if redirect is not None:
+        return redirect
+    return RedirectResponse(home_for(user), status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.get("/paciente", response_class=HTMLResponse, include_in_schema=False)
+def patient_page(request: Request, db: Session = Depends(get_db)):
+    user, redirect = require_page_user(request, db, UserRole.PATIENT)
+    if redirect is not None:
+        return redirect
+    profile = user.patient_profile
+    context = base_context(request, user) | {"profile": profile}
+    return templates.TemplateResponse(request=request, name="paciente.html", context=context)
+
+
+@app.get("/medico", response_class=HTMLResponse, include_in_schema=False)
+def doctor_page(request: Request, db: Session = Depends(get_db)):
+    user, redirect = require_page_user(request, db, UserRole.DOCTOR)
+    if redirect is not None:
+        return redirect
+    doctor_profile = user.doctor_profile
+    establishment = doctor_profile.establecimiento if doctor_profile else None
+    context = base_context(request, user) | {
+        "doctor_profile": doctor_profile,
+        "establishment": establishment,
+        "queue_count": 0,
+        "critical_count": 0,
+        "in_attention_count": 0,
+    }
+    return templates.TemplateResponse(request=request, name="medico.html", context=context)
+
+
+@app.get("/admin", response_class=HTMLResponse, include_in_schema=False)
+def admin_page(request: Request, db: Session = Depends(get_db)):
+    user, redirect = require_page_user(request, db, UserRole.ADMIN)
+    if redirect is not None:
+        return redirect
+    stats = {
+        "users": db.scalar(select(func.count()).select_from(User)) or 0,
+        "establishments": db.scalar(
+            select(func.count()).select_from(Establishment).where(Establishment.is_active.is_(True))
+        )
+        or 0,
+        "ranges": db.scalar(select(func.count()).select_from(NormalRange)) or 0,
+    }
+    establishments = db.scalars(
+        select(Establishment)
+        .where(Establishment.is_active.is_(True))
+        .order_by(Establishment.nombre)
+        .limit(10)
+    ).all()
+    users = db.scalars(select(User).order_by(User.created_at.desc()).limit(10)).all()
+    context = base_context(request, user) | {
+        "stats": stats,
+        "establishments": establishments,
+        "users": users,
+    }
+    return templates.TemplateResponse(request=request, name="admin.html", context=context)

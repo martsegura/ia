@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Mi panel · SaluDuoc{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <span class="pill pill-patient">Paciente</span>
+    <h1>Hola, {{ user.full_name.split(' ')[0] }}</h1>
+    <p class="muted">Este es tu espacio para registrar signos vitales y revisar tu categoría de urgencia.</p>
+  </div>
+</section>
+
+<div class="stat-grid">
+  <article class="stat-card">
+    <span>Categoría actual</span>
+    <strong class="stat-muted">Sin evaluar</strong>
+    <small>Disponible en Fase 2</small>
+  </article>
+  <article class="stat-card">
+    <span>Signos vitales</span>
+    <strong class="stat-muted">Sin registros</strong>
+    <small>Disponible en Fase 1</small>
+  </article>
+  <article class="stat-card">
+    <span>Establecimientos</span>
+    <strong>76</strong>
+    <small>Red pública y privada cercana a sedes Duoc</small>
+  </article>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Mi perfil</h2>
+    <span class="badge badge-info">Fase 0</span>
+  </div>
+  {% if profile %}
+  <dl class="profile-grid">
+    <div><dt>Correo</dt><dd>{{ user.email }}</dd></div>
+    <div><dt>Fecha de nacimiento</dt><dd>{{ profile.birth_date or "Sin registrar" }}</dd></div>
+    <div><dt>Sexo</dt><dd>{{ profile.sexo or "Sin registrar" }}</dd></div>
+    <div><dt>Peso</dt><dd>{% if profile.peso_kg %}{{ profile.peso_kg }} kg{% else %}Sin registrar{% endif %}</dd></div>
+    <div><dt>Talla</dt><dd>{% if profile.talla_cm %}{{ profile.talla_cm }} cm{% else %}Sin registrar{% endif %}</dd></div>
+    <div><dt>Contacto de emergencia</dt><dd>{{ profile.contacto_emergencia or "Sin registrar" }}</dd></div>
+    <div class="profile-wide">
+      <dt>Comorbilidades</dt>
+      <dd>{% if profile.comorbilidades %}{{ profile.comorbilidades | join(", ") }}{% else %}Ninguna registrada{% endif %}</dd>
+    </div>
+    <div class="profile-wide">
+      <dt>Medicamentos</dt>
+      <dd>{% if profile.medicamentos %}{{ profile.medicamentos | join(", ") }}{% else %}Ninguno registrado{% endif %}</dd>
+    </div>
+  </dl>
+  <p class="hint">La edición del perfil estará disponible en la Fase 1.</p>
+  {% else %}
+  <p class="empty-state">Tu perfil aún no está creado. Contacta al administrador.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Próximos pasos</h2>
+  <ul class="checklist">
+    <li><span class="dot dot-yellow"></span> Fase 1: subir el JSON de tu reloj o ingresar signos vitales manualmente.</li>
+    <li><span class="dot dot-red"></span> Fase 2: obtener tu pre-categorización C1–C5 con explicación.</li>
+    <li><span class="dot dot-green"></span> Fase 3: elegir el establecimiento más cercano y ver tu posición en la cola.</li>
+  </ul>
+</section>
+{% endblock %}

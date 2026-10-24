@@ -7,6 +7,16 @@ el versionado semántico ([SemVer](https://semver.org/lang/es/)).
 
 ## [Unreleased]
 
+### Added
+
+- Paneles por rol: `/paciente`, `/medico` y `/admin`, con redirección
+  automática después del login y protección server-side por rol.
+- Navbar con enlace al panel, nombre del usuario y cierre de sesión.
+- Dashboard del paciente con perfil y próximos pasos; panel médico con cola
+  placeholder y establecimiento; panel admin con métricas, establecimientos y
+  usuarios recientes.
+- Redirección de `/dashboard` y de `/login`/`/registro` según la sesión activa.
+
 ### Fixed
 
 - Rutas root-relative para CSS y JavaScript, evitando mixed content cuando la

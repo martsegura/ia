@@ -9,11 +9,17 @@
       Registra los datos de tu reloj inteligente, conoce tu categoría de urgencia
       y encuentra el centro de salud más cercano a tu sede.
     </p>
-    <div class="actions">
-      <a class="btn btn-primary" href="/registro">Comenzar</a>
-      <a class="btn" href="/login">Ya tengo cuenta</a>
-    </div>
-    <p id="session-info" class="muted"></p>
+    {% if user %}
+      <p class="muted">Sesión activa: {{ user.full_name }} ({{ user.role.value }})</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="{{ home_path }}">Ir a mi panel</a>
+      </div>
+    {% else %}
+      <div class="actions">
+        <a class="btn btn-primary" href="/registro">Comenzar</a>
+        <a class="btn" href="/login">Ya tengo cuenta</a>
+      </div>
+    {% endif %}
   </div>
   <div class="hero-card">
     <h2>Semáforo de urgencia</h2>
@@ -25,17 +31,4 @@
     <p class="hint">La categoría final siempre la confirma un profesional.</p>
   </div>
 </section>
-{% endblock %}
-{% block scripts %}
-<script>
-  document.addEventListener("DOMContentLoaded", async () => {
-    try {
-      const user = await window.SaluDuoc.api("/auth/me");
-      const info = document.getElementById("session-info");
-      info.textContent = `Sesión activa: ${user.full_name} (${user.role})`;
-    } catch (_) {
-      /* visitante */
-    }
-  });
-</script>
 {% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Panel admin · SaluDuoc{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <span class="pill pill-admin">Administrador</span>
+    <h1>Panel de administración</h1>
+    <p class="muted">Resumen de usuarios, establecimientos y rangos de normalidad.</p>
+  </div>
+</section>
+
+<div class="stat-grid">
+  <article class="stat-card">
+    <span>Usuarios</span>
+    <strong>{{ stats.users }}</strong>
+    <small>Pacientes, médicos y admins</small>
+  </article>
+  <article class="stat-card">
+    <span>Establecimientos</span>
+    <strong>{{ stats.establishments }}</strong>
+    <small>Activos en el seed DEIS/MINSAL</small>
+  </article>
+  <article class="stat-card">
+    <span>Rangos normales</span>
+    <strong>{{ stats.ranges }}</strong>
+    <small>Métricas MINSAL versionadas</small>
+  </article>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Establecimientos</h2>
+    <span class="badge badge-info">Primeros 10</span>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Nombre</th><th>Comuna</th><th>Sede Duoc</th><th>Urgencia</th></tr>
+      </thead>
+      <tbody>
+        {% for item in establishments %}
+        <tr>
+          <td>{{ item.nombre }}</td>
+          <td>{{ item.comuna or "—" }}</td>
+          <td>{{ item.sede_duoc or "—" }}</td>
+          <td>{% if item.tiene_urgencia %}<span class="badge badge-ok">Sí</span>{% else %}<span class="badge">No</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Usuarios recientes</h2>
+    <span class="badge badge-info">Primeros 10</span>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th></tr>
+      </thead>
+      <tbody>
+        {% for item in users %}
+        <tr>
+          <td>{{ item.full_name }}</td>
+          <td>{{ item.email }}</td>
+          <td><span class="badge badge-role">{{ item.role.value }}</span></td>
+          <td>{% if item.is_active %}<span class="badge badge-ok">Activo</span>{% else %}<span class="badge badge-off">Inactivo</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="hint">La gestión completa de establecimientos, rangos y reglas llega en la Fase 5.</p>
+</section>
+{% endblock %}

@@ -151,17 +151,19 @@ def seed_users(db) -> None:
     )
     establishment = db.scalar(
         select(Establishment)
-        .where(Establishment.sede_duoc == "Sede Alameda")
-        .order_by(Establishment.tiene_urgencia.desc(), Establishment.nombre)
+        .where(
+            Establishment.sede_duoc == "Sede Alameda",
+            Establishment.tiene_urgencia.is_(True),
+        )
+        .order_by(Establishment.nombre)
         .limit(1)
     )
     if establishment is None:
         establishment = db.scalar(select(Establishment).order_by(Establishment.nombre).limit(1))
     if doctor.doctor_profile is None:
-        doctor.doctor_profile = DoctorProfile(
-            especialidad="Medicina de Urgencia",
-            establecimiento_id=establishment.id if establishment else None,
-        )
+        doctor.doctor_profile = DoctorProfile(especialidad="Medicina de Urgencia")
+    if establishment is not None:
+        doctor.doctor_profile.establecimiento_id = establishment.id
 
     get_or_create_user(db, "admin@demo.cl", "Administrador SaluDuoc", UserRole.ADMIN)
 

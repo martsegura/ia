@@ -13,7 +13,7 @@ from app.models.enums import UserRole
 from app.models.user import User
 
 
-def _load_user_from_token(request: Request, db: Session) -> User | None:
+def load_user_from_token(request: Request, db: Session) -> User | None:
     token = request.cookies.get(settings.COOKIE_NAME)
     if not token:
         return None
@@ -33,7 +33,7 @@ def _load_user_from_token(request: Request, db: Session) -> User | None:
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     """Lee el JWT desde la cookie HttpOnly y devuelve el usuario activo."""
-    user = _load_user_from_token(request, db)
+    user = load_user_from_token(request, db)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -45,7 +45,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
 
 def get_current_user_optional(request: Request, db: Session = Depends(get_db)) -> User | None:
     """Igual que get_current_user, pero devuelve None si no hay sesión válida."""
-    return _load_user_from_token(request, db)
+    return load_user_from_token(request, db)
 
 
 def require_roles(*roles: UserRole):

@@ -130,7 +130,19 @@ primero a los casos más graves.
   síntomas.
 - El paciente ve su posición y estado (polling cada 10 s en el MVP).
 
-### 4.7 Administración
+### 4.7 Pantallas por rol
+
+**Como** usuario **quiero** entrar a mi panel según mi rol **para** ver la
+información y acciones que me corresponden.
+
+- Después del login, el paciente va a `/paciente`, el médico a `/medico` y el
+  admin a `/admin`.
+- Sin sesión, los paneles redirigen a `/login`.
+- Un rol no puede abrir el panel de otro rol; se redirige al suyo.
+- El paciente ve su perfil; el médico ve su establecimiento y la cola (vacía en
+  Fase 0); el admin ve métricas, establecimientos y usuarios recientes.
+
+### 4.8 Administración
 
 **Como** admin **quiero** gestionar establecimientos, rangos y reglas **para**
 mantener el sistema actualizado.
