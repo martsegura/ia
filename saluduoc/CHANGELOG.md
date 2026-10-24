@@ -26,6 +26,12 @@ el versionado semántico ([SemVer](https://semver.org/lang/es/)).
   usuarios recientes.
 - Redirección de `/dashboard` y de `/login`/`/registro` según la sesión activa.
 
+### Repository
+
+- Publicación pública del proyecto dentro del repositorio `martsegura/ia`, en
+  la subcarpeta `saluduoc/`, con licencia MIT y la CI única del monorepo
+  (`.github/workflows/ci.yml`).
+
 ### Fixed
 
 - Rutas root-relative para CSS y JavaScript, evitando mixed content cuando la

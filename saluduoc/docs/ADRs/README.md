@@ -12,6 +12,7 @@ cambie la implementación.
 | [0004](0004-seed-deis-duoc.md) | Seed de establecimientos desde DEIS alrededor de sedes Duoc | Aceptada | 0 |
 | [0005](0005-cola-por-establecimiento.md) | Cola por establecimiento y creación desde el triage | Implementada | 4 |
 | [0006](0006-guardas-produccion-y-sesion.md) | Guardas de producción y versión de sesión | Aceptada | 0 |
+| [0007](0007-publicacion-repo-publico.md) | Publicación en repositorio público como subcarpeta | Aceptada | — |
 
 ## Alcance
 
@@ -19,6 +20,8 @@ cambie la implementación.
   DEIS) y 0006 (guardas de producción y `token_version`).
 - **Implementadas en fases posteriores:** 0003 (motor de triage, Fase 2) y
   0005 (cola de espera, Fase 4).
+- **Decisión transversal:** 0007 (publicación del proyecto en `martsegura/ia`
+  bajo `saluduoc/`), no asociada a una fase.
 
 ## Convenciones
 

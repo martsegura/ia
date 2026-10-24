@@ -1,0 +1,3 @@
+# CLI de lemoria: no se publica en este repo (el contenedor del monorepo)
+/lemoria/
+.DS_Store
