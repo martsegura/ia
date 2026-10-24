@@ -22,7 +22,7 @@ const api = async (path, options = {}) => {
     if (typeof data?.detail === "string") {
       detail = data.detail;
     } else if (Array.isArray(data?.detail)) {
-      detail = data.detail.map((item) => item.msg || "Dato inválido").join(". ");
+      detail = data.detail.map((item) => traducirError(item.msg || "Dato inválido")).join(". ");
     }
 
     if (response.status === 401 && !["/login", "/registro"].includes(window.location.pathname)) {
@@ -31,6 +31,22 @@ const api = async (path, options = {}) => {
     throw new Error(detail);
   }
   return data;
+};
+
+/** Traduce los mensajes de validación más comunes al español. */
+const traducirError = (message) => {
+  const limpio = String(message).replace(/^Value error,\s*/i, "");
+  const reglas = [
+    [/not a valid email address/i, "Ingresa un correo electrónico válido"],
+    [/String should have at least (\d+) character/i, "El campo debe tener al menos $1 caracteres"],
+    [/String should have at most (\d+) character/i, "El campo no puede superar los $1 caracteres"],
+    [/Field required/i, "Este campo es obligatorio"],
+    [/Input should be a valid/i, "El valor ingresado no es válido"],
+  ];
+  for (const [patron, reemplazo] of reglas) {
+    if (patron.test(limpio)) return limpio.replace(patron, reemplazo);
+  }
+  return limpio;
 };
 
 window.SaluDuoc = { api };
@@ -94,6 +110,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Rellenar credenciales demo (solo visible en dev/test).
+  document.querySelectorAll(".demo-fill").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.getElementById("email").value = button.dataset.email;
+      document.getElementById("password").value = "Demo123!";
+      showMessage("Credenciales demo cargadas. Presiona Entrar.", "ok");
+    });
+  });
+
   const registerForm = document.getElementById("register-form");
   if (registerForm) {
     registerForm.addEventListener("submit", async (event) => {
@@ -110,8 +135,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             password: document.getElementById("password").value,
           }),
         });
-        showMessage("Cuenta creada. Ahora puedes iniciar sesión.", "ok");
-        setTimeout(() => (window.location.href = "/login"), 900);
+        showMessage("Cuenta creada. Entrando a tu sesión...", "ok");
+        setTimeout(() => (window.location.href = "/"), 700);
       } catch (error) {
         showMessage(error.message);
       } finally {

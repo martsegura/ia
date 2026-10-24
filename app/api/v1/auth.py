@@ -25,6 +25,23 @@ from app.services.user_service import user_out
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _session_response(user: User, status_code: int = status.HTTP_200_OK) -> JSONResponse:
+    """Construye la respuesta con el JWT en cookie HttpOnly."""
+    response = JSONResponse(
+        content=user_out(user).model_dump(mode="json"), status_code=status_code
+    )
+    response.set_cookie(
+        key=settings.COOKIE_NAME,
+        value=create_access_token(user.id, user.role.value, user.token_version),
+        httponly=True,
+        samesite="lax",
+        secure=settings.COOKIE_SECURE,
+        max_age=settings.TOKEN_TTL_MINUTES * 60,
+        path="/",
+    )
+    return response
+
+
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> UserOut:
     """Registra un paciente nuevo."""
@@ -52,7 +69,8 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> UserOut
             detail="Ya existe una cuenta con ese correo",
         ) from None
     db.refresh(user)
-    return user_out(user)
+    # Deja la sesión iniciada para que el registro no obligue a un segundo paso.
+    return _session_response(user, status_code=status.HTTP_201_CREATED)
 
 
 @router.post("/login", response_model=UserOut)
@@ -85,18 +103,7 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
         )
 
     login_limiter.reset(rate_key)
-    token = create_access_token(user.id, user.role.value, user.token_version)
-    response = JSONResponse(content=user_out(user).model_dump(mode="json"))
-    response.set_cookie(
-        key=settings.COOKIE_NAME,
-        value=token,
-        httponly=True,
-        samesite="lax",
-        secure=settings.COOKIE_SECURE,
-        max_age=settings.TOKEN_TTL_MINUTES * 60,
-        path="/",
-    )
-    return response
+    return _session_response(user)
 
 
 @router.post("/logout", response_model=MessageResponse)

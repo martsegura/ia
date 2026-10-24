@@ -21,6 +21,11 @@ def test_register_creates_patient_with_profile(client):
     assert body["role"] == "patient"
     assert body["full_name"] == "Ana Pérez"
     assert body["profile"]["comorbilidades"] == []
+    # El registro deja la sesión iniciada (auto-login).
+    assert "saluduoc_token" in response.cookies
+    me = client.get("/api/v1/auth/me")
+    assert me.status_code == 200
+    assert me.json()["email"] == email
 
 
 def test_register_duplicate_email_returns_409(client):
@@ -38,6 +43,16 @@ def test_register_rejects_weak_password(client):
         json={"email": unique_email("weak"), "password": "sololetras", "full_name": "Débil"},
     )
     assert response.status_code == 422
+    assert "al menos un número" in response.text
+
+
+def test_register_rejects_invalid_email_in_spanish(client):
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": "correo-invalido", "password": PASSWORD, "full_name": "Sin Correo"},
+    )
+    assert response.status_code == 422
+    assert "correo electrónico válido" in response.text
 
 
 def test_login_sets_httponly_cookie_and_me_works(client, make_user):

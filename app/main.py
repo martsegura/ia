@@ -91,7 +91,12 @@ def index(request: Request) -> HTMLResponse:
 @app.get("/login", response_class=HTMLResponse, include_in_schema=False)
 def login_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
-        request=request, name="login.html", context={"app_name": settings.APP_NAME}
+        request=request,
+        name="login.html",
+        context={
+            "app_name": settings.APP_NAME,
+            "show_demo": settings.ENV in ("dev", "test"),
+        },
     )
 
 
