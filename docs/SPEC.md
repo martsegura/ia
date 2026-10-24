@@ -104,20 +104,23 @@ timestamps.
 
 ## 5. Autenticación y autorización
 
-1. `POST /api/v1/auth/login` valida Argon2 y firma un JWT HS256 con `sub`,
+1. `POST /api/v1/auth/register` crea el paciente y deja la sesión iniciada
+   emitiendo la misma cookie HttpOnly.
+2. `POST /api/v1/auth/login` valida Argon2 y firma un JWT HS256 con `sub`,
    `role` y `ver`.
-2. El token se envía en la cookie `saluduoc_token` (`HttpOnly`, `SameSite=Lax`,
+3. El token se envía en la cookie `saluduoc_token` (`HttpOnly`, `SameSite=Lax`,
    `Secure` según configuración, `Max-Age` = TTL). Incluye `ver` (versión de
    sesión).
-3. `get_current_user` lee la cookie, valida el JWT, comprueba `ver` contra
+4. `get_current_user` lee la cookie, valida el JWT, comprueba `ver` contra
    `users.token_version` y carga el usuario activo. El rol efectivo se lee de la
    base de datos, no se confía en el claim del token.
-4. `require_roles(*roles)` protege endpoints por rol.
-5. Logout incrementa `token_version` (invalida todos los tokens emitidos) y
+5. `require_roles(*roles)` protege endpoints por rol.
+6. Logout incrementa `token_version` (invalida todos los tokens emitidos) y
    elimina la cookie.
 
-Rate limit de login: 5 fallos por `IP + email` por minuto (en memoria, un
-proceso). En producción con varios workers se debe usar Redis. La respuesta
+Los errores de validación de auth se devuelven en español y sin ecoar la
+contraseña. Rate limit de login: 5 fallos por `IP + email` por minuto (en
+memoria, un proceso). En producción con varios workers se debe usar Redis. La respuesta
 `429` incluye `Retry-After`.
 
 Con `ENV` distinto de `dev`/`test` el arranque falla si `SECRET_KEY` es

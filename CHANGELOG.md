@@ -7,7 +7,14 @@ el versionado semántico ([SemVer](https://semver.org/lang/es/)).
 
 ## [Unreleased]
 
-Sin cambios posteriores a la Fase 0.
+### Fixed
+
+- Rutas root-relative para CSS y JavaScript, evitando mixed content cuando la
+  app se sirve detrás de un proxy HTTPS (Codespaces/port forwarding).
+- Registro con auto-login: `POST /auth/register` deja la sesión iniciada y el
+  usuario entra directo a `/`, sin un segundo paso de login.
+- Mensajes de validación de email, contraseña y nombre en español.
+- Botones de cuentas demo en la pantalla de login, visibles solo en `dev`/`test`.
 
 ## [0.1.0] - 2026-10-24
 
