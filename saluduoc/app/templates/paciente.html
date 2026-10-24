@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Mi panel · SaluDuoc{% endblock %}
+{% block content %}
+{% set labels = {"C1": "Emergencia vital", "C2": "Emergencia evidente", "C3": "Urgencia con riesgo", "C4": "Urgencia mediata", "C5": "Consulta general"} %}
+{% set status_labels = {"waiting": "En espera", "called": "Llamado", "in_attention": "En atención", "attended": "Atendido", "left": "Retirado"} %}
+<section class="page-head">
+  <div>
+    <span class="pill pill-patient">Paciente</span>
+    <h1>Hola, {{ user.full_name.split(' ')[0] }}</h1>
+    <p class="muted">Registra tus signos vitales, revisa tu categoría y sigue tu lugar en la cola.</p>
+  </div>
+  <a class="btn btn-primary" href="#nuevo-registro">Nuevo registro</a>
+</section>
+
+<div class="stat-grid">
+  <article class="stat-card">
+    <span>Categoría actual</span>
+    {% if latest %}
+      <strong class="triage-text-{{ latest.color }}">{{ latest.category }}</strong>
+      <small>{{ labels[latest.category] }} · {{ latest.created_at.strftime('%d-%m-%Y %H:%M') }}</small>
+    {% else %}
+      <strong class="stat-muted">Sin evaluar</strong>
+      <small>Completa tu primer registro</small>
+    {% endif %}
+  </article>
+  <article class="stat-card">
+    <span>Signos vitales</span>
+    {% if history %}
+      {% set last = history[0] %}
+      <strong>{{ last.heart_rate_bpm or "—" }} <small>lpm</small></strong>
+      <small>PA {{ last.systolic_mmhg or "—" }}/{{ last.diastolic_mmhg or "—" }} · SpO2 {{ last.spo2_pct or "—" }}%</small>
+    {% else %}
+      <strong class="stat-muted">Sin registros</strong>
+      <small>Sube tu JSON o usa el formulario</small>
+    {% endif %}
+  </article>
+  <article class="stat-card">
+    <span>Establecimientos</span>
+    <strong>{{ establishments | length }}</strong>
+    <small>Red pública y privada cerca de sedes Duoc</small>
+  </article>
+</div>
+
+{% if latest %}
+<section id="resultado" class="panel result-panel triage-border-{{ latest.color }}">
+  <div class="panel-head">
+    <div class="result-title">
+      <span class="badge triage-bg-{{ latest.color }}">{{ latest.category }}</span>
+      <h2>{{ labels[latest.category] }}</h2>
+    </div>
+    <span class="muted">Puntaje {{ "%.0f"|format(latest.score) }} · {{ latest.created_at.strftime('%d-%m-%Y %H:%M') }}</span>
+  </div>
+
+  {% if latest.category in ("C1", "C2") %}
+  <div class="alert alert-danger">
+    <strong>Atención inmediata.</strong> Acude al servicio de urgencias más cercano o llama al <strong>131</strong>.
+    Esta categoría es orientativa y debe ser confirmada por un profesional.
+  </div>
+  {% endif %}
+
+  <p class="result-rationale">{{ latest.rationale }}</p>
+
+  {% if latest.triggered_rules %}
+  <h3>Reglas activadas</h3>
+  <ul class="rule-list">
+    {% for rule in latest.triggered_rules %}
+    <li>
+      <span class="badge {% if rule.category in ('C1','C2') %}badge-off{% elif rule.category == 'C3' %}badge-warn{% else %}badge-ok{% endif %}">{{ rule.category }}</span>
+      {{ rule.label }}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if latest.queue %}
+  <div class="queue-summary">
+    <h3>Tu lugar en la cola</h3>
+    <div class="queue-summary-grid">
+      <div><span>Establecimiento</span><strong>{{ latest.queue.establishment_name }}</strong></div>
+      <div><span>Estado</span><strong>{{ status_labels[latest.queue.status] }}</strong></div>
+      <div><span>Posición</span><strong>{% if latest.queue.position %}#{{ latest.queue.position }}{% else %}—{% endif %}</strong></div>
+      <div><span>Espera</span><strong>Hace {{ latest.queue.wait_minutes }} min</strong></div>
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+<section id="nuevo-registro" class="panel">
+  <div class="panel-head">
+    <h2>Nuevo registro</h2>
+    <span class="badge badge-info">Fases 1 y 2</span>
+  </div>
+
+  <div class="field">
+    <label for="queue-establishment">Establecimiento para la cola</label>
+    <select id="queue-establishment">
+      <option value="">Sin establecimiento (solo categoría)</option>
+      {% for item in establishments %}
+      <option value="{{ item.id }}">{{ item.nombre }} — {{ item.comuna or "Sin comuna" }}{% if item.tiene_urgencia %} · Urgencias{% endif %}</option>
+      {% endfor %}
+    </select>
+    <small class="hint">Si eliges uno, tu solicitud entra automáticamente a su cola.</small>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button type="button" class="tab active" data-tab="manual">Formulario manual</button>
+    <button type="button" class="tab" data-tab="upload">Subir JSON del reloj</button>
+  </div>
+
+  <div id="tab-manual" class="tab-panel active">
+    <form id="vitals-form" novalidate>
+      <div class="form-grid">
+        <div class="field">
+          <label for="recorded_at">Fecha y hora</label>
+          <input id="recorded_at" type="datetime-local">
+        </div>
+        <div class="field">
+          <label for="heart_rate_bpm">Frecuencia cardíaca (lpm)</label>
+          <input id="heart_rate_bpm" type="number" min="20" max="250" placeholder="Ej. 78">
+        </div>
+        <div class="field">
+          <label for="systolic_mmhg">Presión sistólica (mmHg)</label>
+          <input id="systolic_mmhg" type="number" min="40" max="300" placeholder="Ej. 118">
+        </div>
+        <div class="field">
+          <label for="diastolic_mmhg">Presión diastólica (mmHg)</label>
+          <input id="diastolic_mmhg" type="number" min="20" max="200" placeholder="Ej. 76">
+        </div>
+        <div class="field">
+          <label for="spo2_pct">Saturación SpO2 (%)</label>
+          <input id="spo2_pct" type="number" min="50" max="100" placeholder="Ej. 97">
+        </div>
+        <div class="field">
+          <label for="sleep_quality_score">Calidad de sueño (0-100)</label>
+          <input id="sleep_quality_score" type="number" min="0" max="100" placeholder="Ej. 82">
+        </div>
+        <div class="field">
+          <label for="sleep_hours">Horas de sueño</label>
+          <input id="sleep_hours" type="number" min="0" max="24" step="0.1" placeholder="Ej. 7.5">
+        </div>
+      </div>
+
+      <fieldset class="symptom-fieldset">
+        <legend>Síntomas</legend>
+        <div class="checkbox-grid">
+          {% for symptom in symptoms %}
+          <label class="check">
+            <input type="checkbox" name="symptoms" value="{{ symptom }}">
+            <span>{{ symptom }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="pain_scale">Dolor (0 a 10): <output id="pain-output">0</output></label>
+          <input id="pain_scale" type="range" min="0" max="10" value="0">
+        </div>
+        <div class="field">
+          <label for="onset">Inicio de los síntomas</label>
+          <select id="onset">
+            <option value="">Selecciona</option>
+            <option value="Hace minutos">Hace minutos</option>
+            <option value="Hace horas">Hace horas</option>
+            <option value="Hace días">Hace días</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="notes">Notas para el equipo médico</label>
+        <textarea id="notes" rows="2" maxlength="1000" placeholder="Ej. dolor al pecho al caminar"></textarea>
+      </div>
+
+      <button class="btn btn-primary" type="submit">Calcular categoría y entrar a la cola</button>
+      <p id="vitals-message" class="message" role="alert"></p>
+    </form>
+  </div>
+
+  <div id="tab-upload" class="tab-panel">
+    <form id="upload-form" novalidate>
+      <div class="field">
+        <label for="watch-file">Archivo JSON del reloj</label>
+        <input id="watch-file" type="file" accept="application/json,.json">
+        <small class="hint">También puedes pegar el JSON directamente abajo.</small>
+      </div>
+      <div class="field">
+        <label for="watch-json">Contenido JSON</label>
+        <textarea id="watch-json" rows="8" placeholder='{"device":"SmartWatch Demo","records":[{"timestamp":"2026-10-24T08:00:00-03:00","heart_rate_bpm":78,"blood_pressure":{"systolic":118,"diastolic":76},"oxygen_saturation_pct":97,"sleep_quality":{"score":82,"hours":7.5}}]}'></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Procesar JSON y calcular categoría</button>
+      <p id="upload-message" class="message" role="alert"></p>
+    </form>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Historial reciente</h2>
+    <span class="badge badge-info">Últimos 5</span>
+  </div>
+  {% if history %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Fecha</th><th>FC</th><th>Presión</th><th>SpO2</th><th>Sueño</th><th>Origen</th></tr>
+      </thead>
+      <tbody>
+        {% for record in history %}
+        <tr>
+          <td>{{ record.recorded_at.strftime('%d-%m-%Y %H:%M') }}</td>
+          <td>{{ record.heart_rate_bpm or "—" }} lpm</td>
+          <td>{{ record.systolic_mmhg or "—" }}/{{ record.diastolic_mmhg or "—" }}</td>
+          <td>{{ record.spo2_pct or "—" }}%</td>
+          <td>{% if record.sleep_quality_score is not none %}{{ record.sleep_quality_score }}/100{% else %}—{% endif %}</td>
+          <td><span class="badge">{{ "Reloj" if record.source == "upload" else "Manual" }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty-state">Aún no tienes registros. Usa el formulario o sube el JSON de tu reloj.</p>
+  {% endif %}
+</section>
+{% endblock %}

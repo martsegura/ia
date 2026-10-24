@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Iniciar sesión · SaluDuoc{% endblock %}
+{% block content %}
+<section class="card auth-card">
+  <h1>Iniciar sesión</h1>
+  <p class="muted">Accede a tu cuenta de paciente, médico o administrador.</p>
+
+  <form id="login-form" novalidate>
+    <label for="email">Correo electrónico</label>
+    <input id="email" name="email" type="email" autocomplete="email" required placeholder="paciente@demo.cl">
+
+    <label for="password">Contraseña</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••">
+
+    <button class="btn btn-primary" type="submit">Entrar</button>
+    <p id="message" class="message" role="alert"></p>
+  </form>
+
+  <p class="muted">¿No tienes cuenta? <a href="/registro">Regístrate como paciente</a></p>
+
+  {% if show_demo %}
+  <div class="demo-box">
+    <p><strong>Cuentas de prueba</strong> <span class="hint">(solo entorno de desarrollo)</span></p>
+    <div class="demo-accounts">
+      <button type="button" class="btn btn-sm demo-fill" data-email="paciente@demo.cl">Paciente</button>
+      <button type="button" class="btn btn-sm demo-fill" data-email="medico@demo.cl">Médico</button>
+      <button type="button" class="btn btn-sm demo-fill" data-email="admin@demo.cl">Admin</button>
+    </div>
+    <p class="hint">Contraseña para todas: <code>Demo123!</code></p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

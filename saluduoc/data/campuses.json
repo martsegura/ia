@@ -1,0 +1,21 @@
+[
+  {"id": "alameda", "nombre": "Sede Alameda", "direccion": "Av. España 8, Santiago", "lat": -33.4489437, "lng": -70.6700844, "aprox": false},
+  {"id": "antonio-varas", "nombre": "Sede Antonio Varas", "direccion": "Antonio Varas 666, Providencia", "lat": -33.4330482, "lng": -70.6149520, "aprox": false},
+  {"id": "padre-alonso-de-ovalle", "nombre": "Sede Padre Alonso de Ovalle", "direccion": "Padre Alonso de Ovalle 1586, Santiago", "lat": -33.4463, "lng": -70.6553, "aprox": true},
+  {"id": "plaza-vespucio", "nombre": "Sede Plaza Vespucio", "direccion": "Froilán Roa 7107, La Florida", "lat": -33.5166461, "lng": -70.5965041, "aprox": false},
+  {"id": "plaza-oeste", "nombre": "Sede Plaza Oeste", "direccion": "Américo Vespucio 1501, Cerrillos", "lat": -33.5151092, "lng": -70.7183883, "aprox": false},
+  {"id": "plaza-norte", "nombre": "Sede Plaza Norte", "direccion": "Calle Nueva 1660, Huechuraba", "lat": -33.3622170, "lng": -70.6783318, "aprox": false},
+  {"id": "puente-alto", "nombre": "Sede Puente Alto", "direccion": "Av. San Carlos 1340, Puente Alto", "lat": -33.5993114, "lng": -70.5861160, "aprox": false},
+  {"id": "san-bernardo", "nombre": "Sede San Bernardo", "direccion": "Freire 897, San Bernardo", "lat": -33.6028179, "lng": -70.7072949, "aprox": false},
+  {"id": "san-carlos-apoquindo", "nombre": "Sede San Carlos de Apoquindo", "direccion": "Camino El Alba 12881, Las Condes", "lat": -33.4002234, "lng": -70.5056027, "aprox": false},
+  {"id": "san-joaquin", "nombre": "Sede San Joaquín", "direccion": "Vicuña Mackenna 4917, San Joaquín", "lat": -33.4999615, "lng": -70.6166289, "aprox": false},
+  {"id": "maipu", "nombre": "Sede Maipú", "direccion": "Esquina Blanca 501, Maipú", "lat": -33.5120026, "lng": -70.7523787, "aprox": false},
+  {"id": "melipilla", "nombre": "Sede Melipilla", "direccion": "Serrano 1105, Melipilla", "lat": -33.6889643, "lng": -71.2141313, "aprox": false},
+  {"id": "valparaiso", "nombre": "Sede Valparaíso", "direccion": "Av. Brasil 2021, Valparaíso", "lat": -33.0444752, "lng": -71.6154926, "aprox": false},
+  {"id": "vina-del-mar", "nombre": "Sede Viña del Mar", "direccion": "Álvarez 2366, Viña del Mar", "lat": -33.0346988, "lng": -71.5337080, "aprox": false},
+  {"id": "concepcion", "nombre": "Sede San Andrés de Concepción", "direccion": "Paicaví 3280, Concepción", "lat": -36.8017263, "lng": -73.0554937, "aprox": true},
+  {"id": "nacimiento", "nombre": "Campus Nacimiento", "direccion": "Julio Hemmelmann 200, Nacimiento", "lat": -37.4962595, "lng": -72.6892868, "aprox": false},
+  {"id": "arauco", "nombre": "Campus Arauco", "direccion": "Camino a Carampangue 1060, Arauco", "lat": -37.2584625, "lng": -73.2270461, "aprox": true},
+  {"id": "villarrica", "nombre": "Campus Villarrica", "direccion": "Anfión Muñoz 51, Villarrica", "lat": -39.2774331, "lng": -72.2244295, "aprox": false},
+  {"id": "puerto-montt", "nombre": "Sede Puerto Montt", "direccion": "Av. Egaña 651, Puerto Montt", "lat": -41.4717, "lng": -72.9393, "aprox": true}
+]
