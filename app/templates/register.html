@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Crear cuenta · SaluDuoc{% endblock %}
+{% block content %}
+<section class="card auth-card">
+  <h1>Crear cuenta de paciente</h1>
+  <p class="muted">Registra tus datos básicos para comenzar a monitorear tu salud.</p>
+
+  <form id="register-form" novalidate>
+    <label for="full_name">Nombre completo</label>
+    <input id="full_name" name="full_name" type="text" autocomplete="name" required placeholder="Ana Pérez">
+
+    <label for="email">Correo electrónico</label>
+    <input id="email" name="email" type="email" autocomplete="email" required placeholder="ana@correo.cl">
+
+    <label for="password">Contraseña</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="Mínimo 8 caracteres y un número">
+    <small class="hint">Debe tener al menos 8 caracteres e incluir un número.</small>
+
+    <button class="btn btn-primary" type="submit">Crear cuenta</button>
+    <p id="message" class="message" role="alert"></p>
+  </form>
+
+  <p class="muted">¿Ya tienes cuenta? <a href="/login">Inicia sesión</a></p>
+</section>
+{% endblock %}

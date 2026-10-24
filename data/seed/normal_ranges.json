@@ -1,0 +1,62 @@
+[
+  {
+    "metric": "heart_rate_bpm",
+    "label": "Frecuencia cardíaca",
+    "unit": "lpm",
+    "normal_min": 60, "normal_max": 100,
+    "mild_low": 50, "mild_high": 120,
+    "moderate_low": 40, "moderate_high": 150,
+    "critical_low": 40, "critical_high": 150,
+    "is_informational": false,
+    "version": "v1",
+    "fuente": "MINSAL - parámetros clínicos de referencia (validar con protocolo local)"
+  },
+  {
+    "metric": "systolic_mmhg",
+    "label": "Presión arterial sistólica",
+    "unit": "mmHg",
+    "normal_min": 90, "normal_max": 119,
+    "mild_low": null, "mild_high": 139,
+    "moderate_low": 80, "moderate_high": 179,
+    "critical_low": 80, "critical_high": 180,
+    "is_informational": false,
+    "version": "v1",
+    "fuente": "MINSAL - parámetros clínicos de referencia (validar con protocolo local)"
+  },
+  {
+    "metric": "diastolic_mmhg",
+    "label": "Presión arterial diastólica",
+    "unit": "mmHg",
+    "normal_min": 60, "normal_max": 79,
+    "mild_low": null, "mild_high": 89,
+    "moderate_low": 50, "moderate_high": 119,
+    "critical_low": 50, "critical_high": 120,
+    "is_informational": false,
+    "version": "v1",
+    "fuente": "MINSAL - parámetros clínicos de referencia (validar con protocolo local)"
+  },
+  {
+    "metric": "spo2_pct",
+    "label": "Saturación de oxígeno",
+    "unit": "%",
+    "normal_min": 95, "normal_max": 100,
+    "mild_low": 92, "mild_high": null,
+    "moderate_low": 90, "moderate_high": null,
+    "critical_low": 85, "critical_high": null,
+    "is_informational": false,
+    "version": "v1",
+    "fuente": "MINSAL - parámetros clínicos de referencia (validar con protocolo local)"
+  },
+  {
+    "metric": "sleep_quality_score",
+    "label": "Calidad de sueño (reloj inteligente)",
+    "unit": "score 0-100",
+    "normal_min": 70, "normal_max": 100,
+    "mild_low": 50, "mild_high": null,
+    "moderate_low": 0, "moderate_high": null,
+    "critical_low": null, "critical_high": null,
+    "is_informational": true,
+    "version": "v1",
+    "fuente": "Métrica de wearable; no es signo vital MINSAL y no modifica la categoría"
+  }
+]
